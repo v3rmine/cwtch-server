@@ -10,7 +10,7 @@ import (
 )
 
 func TestMessageStore(t *testing.T) {
-	filename := "/home/sarah/testcwtchmessages.db"
+	filename := "../testcwtchmessages.db"
 	os.Remove(filename)
 	log.SetLevel(log.LevelDebug)
 	db, err := InitializeSqliteMessageStore(filename)
