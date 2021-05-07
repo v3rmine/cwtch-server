@@ -56,7 +56,7 @@ func (s SqliteMessageStore) FetchMessages() []*groups.EncryptedGroupMessage {
 func (s SqliteMessageStore) FetchMessagesFrom(signature []byte) []*groups.EncryptedGroupMessage {
 
 	// If signature is empty then treat this as a complete sync request
-	if len(signature) == 0 || signature == nil {
+	if signature == nil || len(signature) == 0 {
 		return s.FetchMessages()
 	}
 
@@ -86,6 +86,13 @@ func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGrou
 			Ciphertext: rawCiphertext,
 		})
 	}
+
+	// if we don't have *any* messages then either the signature next existed
+	// or the server purged it...either way treat this as a full sync...
+	if len(messages) < 1 {
+		return s.FetchMessages()
+	}
+
 	return messages
 }
 
