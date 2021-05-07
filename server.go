@@ -3,9 +3,9 @@ package server
 import (
 	"crypto/ed25519"
 	"cwtch.im/cwtch/model"
-	"cwtch.im/cwtch/server/metrics"
-	"cwtch.im/cwtch/server/storage"
 	"fmt"
+	"git.openprivacy.ca/cwtch.im/server/metrics"
+	"git.openprivacy.ca/cwtch.im/server/storage"
 	"git.openprivacy.ca/cwtch.im/tapir"
 	"git.openprivacy.ca/cwtch.im/tapir/applications"
 	tor2 "git.openprivacy.ca/cwtch.im/tapir/networks/tor"
@@ -62,10 +62,9 @@ func (s *Server) Run(acn connectivity.ACN) error {
 	log.Infof("cwtch server running on cwtch:%s\n", addressIdentity+".onion:")
 	s.metricsPack.Start(service, s.config.ConfigDir, s.config.ServerReporting.LogMetricsToFile)
 
-	ms := new(storage.MessageStore)
-	err := ms.Init(s.config.ConfigDir, s.config.MaxBufferLines, s.metricsPack.MessageCounter)
+	ms, err := storage.InitializeSqliteMessageStore("cwtch.messages")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not open database: %v", err)
 	}
 
 	// Needed because we only collect metrics on a per-session basis
