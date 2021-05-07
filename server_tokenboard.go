@@ -2,8 +2,8 @@ package server
 
 import (
 	"cwtch.im/cwtch/protocol/groups"
-	"cwtch.im/cwtch/server/storage"
 	"encoding/json"
+	"git.openprivacy.ca/cwtch.im/server/storage"
 	"git.openprivacy.ca/cwtch.im/tapir"
 	"git.openprivacy.ca/cwtch.im/tapir/applications"
 	"git.openprivacy.ca/cwtch.im/tapir/primitives/privacypass"
@@ -76,23 +76,25 @@ func (ta *TokenboardServer) Listen() {
 		case groups.ReplayRequestMessage:
 			if message.ReplayRequest != nil {
 				log.Debugf("Received Replay Request %v", message.ReplayRequest)
-				messages := ta.LegacyMessageStore.FetchMessages()
+				messages := ta.LegacyMessageStore.FetchMessagesFrom(message.ReplayRequest.LastCommit)
 				response, _ := json.Marshal(groups.Message{MessageType: groups.ReplayResultMessage, ReplayResult: &groups.ReplayResult{NumMessages: len(messages)}})
 				log.Debugf("Sending Replay Response %v", groups.ReplayResult{NumMessages: len(messages)})
 				ta.connection.Send(response)
+				lastSignature := message.ReplayRequest.LastCommit
 				for _, message := range messages {
+					lastSignature = message.Signature
 					data, _ = json.Marshal(message)
 					ta.connection.Send(data)
 				}
 				log.Debugf("Finished Requested Sync")
 				// Set sync and then send any new messages that might have happened while we were syncing
 				ta.connection.SetCapability(groups.CwtchServerSyncedCapability)
-				newMessages := ta.LegacyMessageStore.FetchMessages()
-				if len(newMessages) > len(messages) {
-					for _, message := range newMessages[len(messages):] {
-						data, _ = json.Marshal(groups.Message{MessageType: groups.NewMessageMessage, NewMessage: &groups.NewMessage{EGM: *message}})
-						ta.connection.Send(data)
-					}
+				// Because we have set the sync capability any new messages that arrive after this point will just
+				// need to do a basic lookup from the last seen message
+				newMessages := ta.LegacyMessageStore.FetchMessagesFrom(lastSignature)
+				for _, message := range newMessages[len(messages):] {
+					data, _ = json.Marshal(groups.Message{MessageType: groups.NewMessageMessage, NewMessage: &groups.NewMessage{EGM: *message}})
+					ta.connection.Send(data)
 				}
 			} else {
 				log.Debugf("Server Closing Connection Because of Malformed ReplayRequestMessage Packet")

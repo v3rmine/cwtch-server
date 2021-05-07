@@ -13,15 +13,22 @@ import (
 type MessageStoreInterface interface {
 	AddMessage(groups.EncryptedGroupMessage)
 	FetchMessages() []*groups.EncryptedGroupMessage
+	FetchMessagesFrom(signature []byte) []*groups.EncryptedGroupMessage
 }
 
 // SqliteMessageStore is an sqlite3 backed message store
 type SqliteMessageStore struct {
 	database *sql.DB
+
+	// Some prepared queries...
+	preparedInsertStatement *sql.Stmt // A Stmt is safe for concurrent use by multiple goroutines.
+	preparedFetchFromQuery  *sql.Stmt
 }
 
 // Close closes the underlying sqlite3 database to further changes
 func (s *SqliteMessageStore) Close() {
+	s.preparedInsertStatement.Close()
+	s.preparedFetchFromQuery.Close()
 	s.database.Close()
 }
 
@@ -32,16 +39,9 @@ func (s *SqliteMessageStore) AddMessage(message groups.EncryptedGroupMessage) {
 		log.Errorf("%q", err)
 		return
 	}
-	sqlStmt := `INSERT INTO messages(signature, ciphertext) values (?,?);`
-	stmt, err := s.database.Prepare(sqlStmt)
+	stmt, err := s.preparedInsertStatement.Exec(base64.StdEncoding.EncodeToString(message.Signature), base64.StdEncoding.EncodeToString(message.Ciphertext))
 	if err != nil {
-		log.Errorf("%q: %s", err, sqlStmt)
-		return
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(base64.StdEncoding.EncodeToString(message.Signature), base64.StdEncoding.EncodeToString(message.Ciphertext))
-	if err != nil {
-		log.Errorf("%q: %s\n", err, sqlStmt)
+		log.Errorf("%v %q", stmt, err)
 		return
 	}
 	tx.Commit()
@@ -55,12 +55,31 @@ func (s SqliteMessageStore) FetchMessages() []*groups.EncryptedGroupMessage {
 		return nil
 	}
 	defer rows.Close()
+	return s.compileRows(rows)
+}
+
+// FetchMessagesFrom implements the MessageStoreInterface FetchMessagesFrom for sqlite message store
+func (s SqliteMessageStore) FetchMessagesFrom(signature []byte) []*groups.EncryptedGroupMessage {
+	if signature == nil {
+		return s.FetchMessages()
+	}
+
+	rows, err := s.preparedFetchFromQuery.Query(base64.StdEncoding.EncodeToString(signature))
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil
+	}
+	defer rows.Close()
+	return s.compileRows(rows)
+}
+
+func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGroupMessage {
 	var messages []*groups.EncryptedGroupMessage
 	for rows.Next() {
 		var id int
 		var signature string
 		var ciphertext string
-		err = rows.Scan(&id, &signature, &ciphertext)
+		err := rows.Scan(&id, &signature, &ciphertext)
 		if err != nil {
 			log.Errorf("Error fetching row %v", err)
 		}
@@ -92,5 +111,21 @@ func InitializeSqliteMessageStore(dbfile string) (*SqliteMessageStore, error) {
 	log.Infof("Database Initialized")
 	slms := new(SqliteMessageStore)
 	slms.database = db
+
+	sqlStmt = `INSERT INTO messages(signature, ciphertext) values (?,?);`
+	stmt, err := slms.database.Prepare(sqlStmt)
+	if err != nil {
+		log.Errorf("%q: %s", err, sqlStmt)
+		return nil, fmt.Errorf("%s: %q", sqlStmt, err)
+	}
+	slms.preparedInsertStatement = stmt
+
+	query, err := slms.database.Prepare("SELECT id, signature,ciphertext FROM messages WHERE id>=(SELECT id FROM messages WHERE signature=(?));")
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, fmt.Errorf("%s: %q", sqlStmt, err)
+	}
+	slms.preparedFetchFromQuery = query
+
 	return slms, nil
 }
