@@ -6,35 +6,44 @@ import (
 	"git.openprivacy.ca/openprivacy/log"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestMessageStore(t *testing.T) {
-	os.Remove("../testcwtchmessages.db")
+	filename := "/home/sarah/testcwtchmessages.db"
+	os.Remove(filename)
 	log.SetLevel(log.LevelDebug)
-	db, err := InitializeSqliteMessageStore("../testcwtchmessages.db")
+	db, err := InitializeSqliteMessageStore(filename)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
 
 	numMessages := 100
 
-	t.Logf("Populating Database")
+	t.Logf("Generating Data...")
+	var messages []groups.EncryptedGroupMessage
 	for i := 0; i < numMessages; i++ {
 		buf := make([]byte, 4)
 		binary.PutUvarint(buf, uint64(i))
-		db.AddMessage(groups.EncryptedGroupMessage{
+		messages = append(messages, groups.EncryptedGroupMessage{
 			Signature:  append([]byte("Hello world"), buf...),
 			Ciphertext: []byte("Hello world"),
 		})
-		t.Logf("Inserted %v", i)
 	}
-	// Wait for inserts to complete..
 
-	messages := db.FetchMessages()
+	t.Logf("Populating Database")
+	start := time.Now()
 	for _, message := range messages {
-		t.Logf("Message: %v", message)
+		db.AddMessage(message)
 	}
-	if len(messages) != numMessages {
+	t.Logf("Time to Insert: %v", time.Since(start))
+
+	// Wait for inserts to complete..
+	fetchedMessages := db.FetchMessages()
+	//for _, message := range fetchedMessages {
+	//t.Logf("Message: %v", message)
+	//}
+	if len(fetchedMessages) != numMessages {
 		t.Fatalf("Incorrect number of messages returned")
 	}
 
@@ -45,11 +54,11 @@ func TestMessageStore(t *testing.T) {
 	buf := make([]byte, 4)
 	binary.PutUvarint(buf, uint64(numToFetch))
 	sig := append([]byte("Hello world"), buf...)
-	messages = db.FetchMessagesFrom(sig)
-	for _, message := range messages {
-		t.Logf("Message: %v", message)
-	}
-	if len(messages) != numToFetch {
+	fetchedMessages = db.FetchMessagesFrom(sig)
+	//for _, message := range fetchedMessages {
+	//	t.Logf("Message: %v", message)
+	//}
+	if len(fetchedMessages) != numToFetch {
 		t.Fatalf("Incorrect number of messages returned : %v", len(messages))
 	}
 

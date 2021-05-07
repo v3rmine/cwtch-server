@@ -92,7 +92,7 @@ func (ta *TokenboardServer) Listen() {
 				// Because we have set the sync capability any new messages that arrive after this point will just
 				// need to do a basic lookup from the last seen message
 				newMessages := ta.LegacyMessageStore.FetchMessagesFrom(lastSignature)
-				for _, message := range newMessages[len(messages):] {
+				for _, message := range newMessages {
 					data, _ = json.Marshal(groups.Message{MessageType: groups.NewMessageMessage, NewMessage: &groups.NewMessage{EGM: *message}})
 					ta.connection.Send(data)
 				}
