@@ -34,6 +34,12 @@ func (s *SqliteMessageStore) Close() {
 
 // AddMessage implements the MessageStoreInterface AddMessage for sqlite message store
 func (s *SqliteMessageStore) AddMessage(message groups.EncryptedGroupMessage) {
+
+	// ignore this clearly invalid message...
+	if len(message.Signature) == 0 {
+		return
+	}
+
 	stmt, err := s.preparedInsertStatement.Exec(base64.StdEncoding.EncodeToString(message.Signature), base64.StdEncoding.EncodeToString(message.Ciphertext))
 	if err != nil {
 		log.Errorf("%v %q", stmt, err)

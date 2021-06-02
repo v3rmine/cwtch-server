@@ -74,7 +74,6 @@ func main() {
 
 	// TODO create a random group for testing
 	group, _ := model.NewGroup(tor.GetTorV3Hostname(serverConfig.PublicKey))
-	group.SignGroup([]byte{})
 	invite, err := group.Invite()
 	if err != nil {
 		panic(err)

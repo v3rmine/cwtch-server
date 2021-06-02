@@ -107,6 +107,12 @@ func (ta *TokenboardServer) Listen() {
 
 func (ta *TokenboardServer) postMessageRequest(pr groups.PostRequest) {
 	if err := ta.TokenService.SpendToken(pr.Token, append(pr.EGM.ToBytes(), ta.connection.ID().Hostname()...)); err == nil {
+
+		// ignore messages with no signatures
+		if len(pr.EGM.Signature)  == 0 {
+			return
+		}
+
 		log.Debugf("Token is valid")
 		ta.LegacyMessageStore.AddMessage(pr.EGM)
 		data, _ := json.Marshal(groups.Message{MessageType: groups.PostResultMessage, PostResult: &groups.PostResult{Success: true}})
