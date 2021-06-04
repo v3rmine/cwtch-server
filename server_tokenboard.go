@@ -109,7 +109,7 @@ func (ta *TokenboardServer) postMessageRequest(pr groups.PostRequest) {
 	if err := ta.TokenService.SpendToken(pr.Token, append(pr.EGM.ToBytes(), ta.connection.ID().Hostname()...)); err == nil {
 
 		// ignore messages with no signatures
-		if len(pr.EGM.Signature)  == 0 {
+		if len(pr.EGM.Signature) == 0 {
 			return
 		}
 

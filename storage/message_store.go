@@ -72,7 +72,15 @@ func (s SqliteMessageStore) FetchMessagesFrom(signature []byte) []*groups.Encryp
 		return nil
 	}
 	defer rows.Close()
-	return s.compileRows(rows)
+	messages := s.compileRows(rows)
+
+	// if we don't have *any* messages then either the signature next existed
+	// or the server purged it...either way treat this as a full sync...
+	if len(messages) < 1 {
+		return s.FetchMessages()
+	}
+
+	return messages
 }
 
 func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGroupMessage {
@@ -92,13 +100,6 @@ func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGrou
 			Ciphertext: rawCiphertext,
 		})
 	}
-
-	// if we don't have *any* messages then either the signature next existed
-	// or the server purged it...either way treat this as a full sync...
-	if len(messages) < 1 {
-		return s.FetchMessages()
-	}
-
 	return messages
 }
 
