@@ -4,10 +4,13 @@ import (
 	"crypto/rand"
 	"cwtch.im/cwtch/model"
 	"encoding/base64"
+	"flag"
+	"fmt"
 	cwtchserver "git.openprivacy.ca/cwtch.im/server"
 	"git.openprivacy.ca/cwtch.im/tapir/primitives"
 	"git.openprivacy.ca/openprivacy/connectivity/tor"
 	"git.openprivacy.ca/openprivacy/log"
+	"io/ioutil"
 	mrand "math/rand"
 	"os"
 	"os/signal"
@@ -20,11 +23,19 @@ const (
 )
 
 func main() {
+	flagDebug := flag.Bool("debug", false, "Enable debug logging")
+	flagExportTofu := flag.Bool("exportTofuBundle", false, "Export the tofubundle to a file called `tofubundle`")
+	flag.Parse()
+
 	log.AddEverythingFromPattern("server/app/main")
 	log.AddEverythingFromPattern("server/server")
 	log.ExcludeFromPattern("service.go")
-	log.SetLevel(log.LevelDebug)
-	configDir := os.Getenv("CWTCH_CONFIG_DIR")
+	log.SetLevel(log.LevelInfo)
+	if *flagDebug {
+		log.Infoln("enableing Debug logging")
+		log.SetLevel(log.LevelDebug)
+	}
+	configDir := os.Getenv("CWTCH_HOME")
 
 	if len(os.Args) == 2 && os.Args[1] == "gen1" {
 		config := new(cwtchserver.Config)
@@ -80,9 +91,13 @@ func main() {
 	}
 
 	bundle := server.KeyBundle().Serialize()
-	log.Infof("Server Config: server:%s", base64.StdEncoding.EncodeToString(bundle))
+	tofubundle := fmt.Sprintf("tofubundle:server:%s||%s", base64.StdEncoding.EncodeToString(bundle), invite)
+	log.Infof("Server Tofu Bundle (import into client to use server): %s", log.Magenta(tofubundle))
+	log.Infof("Server Config: server address:%s", base64.StdEncoding.EncodeToString(bundle))
 
-	log.Infof("Server Tofu Bundle: tofubundle:server:%s||%s", base64.StdEncoding.EncodeToString(bundle), invite)
+	if *flagExportTofu {
+		ioutil.WriteFile("tofubundle", []byte(tofubundle), 0600)
+	}
 
 	// Graceful Shutdown
 	c := make(chan os.Signal, 1)
