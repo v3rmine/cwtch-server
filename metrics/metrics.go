@@ -12,7 +12,6 @@ import (
 type counter struct {
 	startTime time.Time
 	count     uint64
-	total     uint64
 }
 
 // Counter providers a threadsafe counter to use for storing long running counts
@@ -26,7 +25,7 @@ type Counter interface {
 
 // NewCounter initializes a counter starting at time.Now() and a count of 0 and returns it
 func NewCounter() Counter {
-	c := &counter{startTime: time.Now(), count: 0, total: 0}
+	c := &counter{startTime: time.Now(), count: 0}
 	return c
 }
 
