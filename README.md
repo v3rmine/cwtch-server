@@ -18,4 +18,4 @@ When run the app will output standard log lines, one of which will contain the `
 
 ## Docker
 
-Currently, the dockerfile is out of date and is not usable. Check back for updates.
+Build by executing `docker build -f docker/Dockerfile .`
