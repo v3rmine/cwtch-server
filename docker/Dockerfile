@@ -56,7 +56,7 @@ COPY --from=tor-build-stage /usr/local/ /usr/local/
 COPY --from=cwtch-build-stage /go/src/app/app /usr/local/bin/cwtch
 
 # Create unprivileged users
-RUN mkdir -p /run/tor && mkdir /etc/cwtch && addgroup -S $TOR_USER && adduser -G $TOR_USER -S $TOR_USER && adduser -S $CWTCH_USER
+RUN mkdir -p /run/tor && mkdir /var/lib/cwtch && addgroup -S $TOR_USER && adduser -G $TOR_USER -S $TOR_USER && adduser -S $CWTCH_USER
 
 # Copy Tor configuration file
 COPY ./docker/torrc /etc/tor/torrc
@@ -65,9 +65,9 @@ COPY ./docker/torrc /etc/tor/torrc
 COPY ./docker/docker-entrypoint /usr/local/bin/
 
 # Persist data
-VOLUME /etc/tor /var/lib/tor /etc/cwtch
+VOLUME /etc/tor /var/lib/tor /var/lib/cwtch
 
 ENTRYPOINT ["docker-entrypoint"]
 #USER $CWTCH_USER
-CMD ["/usr/local/bin/cwtch"]
+CMD ["env CWTCH_HOME=/var/lib/cwtch /usr/local/bin/cwtch --exportTofuBundle"]
 
