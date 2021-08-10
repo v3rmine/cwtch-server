@@ -38,7 +38,7 @@ RUN cd src/app && go build
 
 FROM alpine:latest
 #Specify user account aliases
-ENV TOR_USER=_tor CWTCH_USER=_cwtch
+ENV TOR_USER=_tor CWTCH_USER=_cwtch CWTCH_HOME=/var/lib/cwtch
 
 # Installing dependencies of Tor
 RUN apk --no-cache add --update \
@@ -69,5 +69,6 @@ VOLUME /etc/tor /var/lib/tor /var/lib/cwtch
 
 ENTRYPOINT ["docker-entrypoint"]
 #USER $CWTCH_USER
-CMD ["env CWTCH_HOME=/var/lib/cwtch /usr/local/bin/cwtch --exportTofuBundle"]
+#CMD ["/usr/local/bin/cwtch --exportTofuBundle"]
+CMD ["/usr/local/bin/cwtch","--exportTofuBundle"]
 
