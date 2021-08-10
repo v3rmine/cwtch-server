@@ -21,10 +21,6 @@ RUN apk --no-cache add --update \
       && make install \
       && ls -R /usr/local/
 
-#-----------------------------------------------
-# Build CWTCH
-#-----------------------------------------------
-
 FROM golang:alpine as cwtch-build-stage
 # Need additional packages for cgo etc
 RUN apk --no-cache add --update gcc build-base
@@ -37,7 +33,7 @@ RUN cd src/app && go build
 
 
 FROM alpine:latest
-#Specify user account aliases
+#Specify various env vars
 ENV TOR_USER=_tor CWTCH_USER=_cwtch CWTCH_HOME=/var/lib/cwtch
 
 # Installing dependencies of Tor
@@ -68,7 +64,5 @@ COPY ./docker/docker-entrypoint /usr/local/bin/
 VOLUME /etc/tor /var/lib/tor /var/lib/cwtch
 
 ENTRYPOINT ["docker-entrypoint"]
-#USER $CWTCH_USER
-#CMD ["/usr/local/bin/cwtch --exportTofuBundle"]
 CMD ["/usr/local/bin/cwtch","--exportTofuBundle"]
 
