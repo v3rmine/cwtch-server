@@ -1,6 +1,6 @@
 FROM alpine:latest as tor-build-stage
 
-# Install prerequisites
+# Install prerequisites, grab tor, compile it and move to /usr/local
 RUN apk --no-cache add --update \
         gnupg \
         build-base \
@@ -26,24 +26,28 @@ RUN apk --no-cache add --update \
 #-----------------------------------------------
 
 FROM golang:alpine as cwtch-build-stage
+# Need additional packages for cgo etc
 RUN apk --no-cache add --update gcc build-base
+
+# Copy source files from the repo to /go/src
 COPY . src/
+
+#Build Cwtch
 RUN cd src/app && go build 
 
 
 FROM alpine:latest
-#BSD habits die hard
+#Specify user account aliases
 ENV TOR_USER=_tor CWTCH_USER=_cwtch
 
-# Installing dependencies of Tor and pwgen
+# Installing dependencies of Tor
 RUN apk --no-cache add --update \
       libevent \
       libressl \
       xz-libs \
       zlib \
       zstd \
-      zstd-dev \
-      pwgen
+      zstd-dev
 
 # Copy Tor
 COPY --from=tor-build-stage /usr/local/ /usr/local/
@@ -51,7 +55,7 @@ COPY --from=tor-build-stage /usr/local/ /usr/local/
 #Copy cwtch app
 COPY --from=cwtch-build-stage /go/src/app/app /usr/local/bin/cwtch
 
-# Create an unprivileged tor user
+# Create unprivileged users
 RUN mkdir -p /run/tor && mkdir /etc/cwtch && addgroup -S $TOR_USER && adduser -G $TOR_USER -S $TOR_USER && adduser -S $CWTCH_USER
 
 # Copy Tor configuration file
