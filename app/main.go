@@ -14,6 +14,7 @@ import (
 	mrand "math/rand"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 )
@@ -24,7 +25,7 @@ const (
 
 func main() {
 	flagDebug := flag.Bool("debug", false, "Enable debug logging")
-	flagExportTofu := flag.Bool("exportTofuBundle", false, "Export the tofubundle to a file called `tofubundle`")
+	flagExportTofu := flag.Bool("exportTofuBundle", false, "Export the tofubundle to a file called tofubundle")
 	flag.Parse()
 
 	log.AddEverythingFromPattern("server/app/main")
@@ -96,7 +97,7 @@ func main() {
 	log.Infof("Server Config: server address:%s", base64.StdEncoding.EncodeToString(bundle))
 
 	if *flagExportTofu {
-		ioutil.WriteFile("tofubundle", []byte(tofubundle), 0600)
+		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "tofubundle"), []byte(tofubundle), 0600)
 	}
 
 	// Graceful Shutdown
