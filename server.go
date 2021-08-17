@@ -62,7 +62,7 @@ func (s *Server) Run(acn connectivity.ACN) error {
 	log.Infof("cwtch server running on cwtch:%s\n", addressIdentity+".onion:")
 	s.metricsPack.Start(service, s.config.ConfigDir, s.config.ServerReporting.LogMetricsToFile)
 
-	ms, err := storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"))
+	ms, err := storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"), s.metricsPack.MessageCounter)
 	if err != nil {
 		return fmt.Errorf("could not open database: %v", err)
 	}

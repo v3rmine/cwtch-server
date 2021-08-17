@@ -2,6 +2,7 @@ package storage
 
 import (
 	"cwtch.im/cwtch/protocol/groups"
+	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
@@ -18,7 +19,8 @@ type MessageStoreInterface interface {
 
 // SqliteMessageStore is an sqlite3 backed message store
 type SqliteMessageStore struct {
-	database *sql.DB
+	messageCounter metrics.Counter
+	database       *sql.DB
 
 	// Some prepared queries...
 	preparedInsertStatement *sql.Stmt // A Stmt is safe for concurrent use by multiple goroutines.
@@ -34,7 +36,7 @@ func (s *SqliteMessageStore) Close() {
 
 // AddMessage implements the MessageStoreInterface AddMessage for sqlite message store
 func (s *SqliteMessageStore) AddMessage(message groups.EncryptedGroupMessage) {
-
+	s.messageCounter.Add(1)
 	// ignore this clearly invalid message...
 	if len(message.Signature) == 0 {
 		return
@@ -105,7 +107,7 @@ func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGrou
 
 // InitializeSqliteMessageStore creates a database `dbfile` with the necessary tables (if it doesn't already exist)
 // and returns an open database
-func InitializeSqliteMessageStore(dbfile string) (*SqliteMessageStore, error) {
+func InitializeSqliteMessageStore(dbfile string, messageCounter metrics.Counter) (*SqliteMessageStore, error) {
 	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		log.Errorf("database %v cannot be created or opened %v", dbfile, err)
@@ -121,6 +123,7 @@ func InitializeSqliteMessageStore(dbfile string) (*SqliteMessageStore, error) {
 	log.Infof("Database Initialized")
 	slms := new(SqliteMessageStore)
 	slms.database = db
+	slms.messageCounter = messageCounter
 
 	sqlStmt = `INSERT INTO messages(signature, ciphertext) values (?,?);`
 	stmt, err := slms.database.Prepare(sqlStmt)

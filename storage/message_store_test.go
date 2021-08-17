@@ -2,6 +2,7 @@ package storage
 
 import (
 	"cwtch.im/cwtch/protocol/groups"
+	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"encoding/binary"
 	"git.openprivacy.ca/openprivacy/log"
 	"os"
@@ -13,7 +14,8 @@ func TestMessageStore(t *testing.T) {
 	filename := "../testcwtchmessages.db"
 	os.Remove(filename)
 	log.SetLevel(log.LevelDebug)
-	db, err := InitializeSqliteMessageStore(filename)
+	counter := metrics.NewCounter()
+	db, err := InitializeSqliteMessageStore(filename, counter)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -37,6 +39,9 @@ func TestMessageStore(t *testing.T) {
 		db.AddMessage(message)
 	}
 	t.Logf("Time to Insert: %v", time.Since(start))
+	if counter.Count() != numMessages {
+		t.Errorf("Counter should be at %v was %v", numMessages, counter.Count())
+	}
 
 	// Wait for inserts to complete..
 	fetchedMessages := db.FetchMessages()
