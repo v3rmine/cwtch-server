@@ -9,6 +9,6 @@ require (
 	git.openprivacy.ca/openprivacy/log v1.0.2
 	github.com/gtank/ristretto255 v0.1.2
 	github.com/mattn/go-sqlite3 v1.14.7
-	github.com/struCoder/pidusage v0.1.3
+	github.com/struCoder/pidusage v0.2.1
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
 )
