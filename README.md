@@ -22,9 +22,8 @@ When run the app will output standard log lines, one of which will contain the `
 
 Build by executing `docker build -f docker/Dockerfile .`
 
-or run our prebuild ones with 
+or run our prebuild ones with
 
-`pull openpriv:cwtch-server`
+`pull openpriv/cwtch-server`
 
 and run it. It stores all Cwtch data in a Volume at `/var/lib/cwtch`
-
