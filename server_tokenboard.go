@@ -50,14 +50,14 @@ func (ta *TokenboardServer) Listen() {
 	for {
 		data := ta.connection.Expect()
 		if len(data) == 0 {
-			log.Debugf("Server Closing Connection")
+			log.Debugf("server Closing Connection")
 			ta.connection.Close()
 			return // connection is closed
 		}
 
 		var message groups.Message
 		if err := json.Unmarshal(data, &message); err != nil {
-			log.Debugf("Server Closing Connection Because of Malformed Client Packet %v", err)
+			log.Debugf("server Closing Connection Because of Malformed Client Packet %v", err)
 			ta.connection.Close()
 			return // connection is closed
 		}
@@ -69,7 +69,7 @@ func (ta *TokenboardServer) Listen() {
 				log.Debugf("Received a Post Message Request: %v", ta.connection.Hostname())
 				ta.postMessageRequest(postrequest)
 			} else {
-				log.Debugf("Server Closing Connection Because of PostRequestMessage Client Packet")
+				log.Debugf("server Closing Connection Because of PostRequestMessage Client Packet")
 				ta.connection.Close()
 				return // connection is closed
 			}
@@ -97,7 +97,7 @@ func (ta *TokenboardServer) Listen() {
 					ta.connection.Send(data)
 				}
 			} else {
-				log.Debugf("Server Closing Connection Because of Malformed ReplayRequestMessage Packet")
+				log.Debugf("server Closing Connection Because of Malformed ReplayRequestMessage Packet")
 				ta.connection.Close()
 				return // connection is closed
 			}

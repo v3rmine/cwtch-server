@@ -14,6 +14,8 @@ The app takes the following arguments
 The app takes the following environment variables
 - CWTCH_HOME: sets the config dir for the app
 
+`env CONFIG_HOME=./conf ./app`
+
 ## Using the Server
 
 When run the app will output standard log lines, one of which will contain the `tofubundle` in purple. This is the part you need to capture and import into a Cwtch client app so you can use the server for hosting groups

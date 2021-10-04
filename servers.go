@@ -1,0 +1,134 @@
+package server
+
+import (
+	"cwtch.im/cwtch/model"
+	"errors"
+	"fmt"
+	"git.openprivacy.ca/openprivacy/connectivity"
+	"io/ioutil"
+	"path"
+	"sync"
+)
+
+// Servers is an interface to manage multiple Cwtch servers
+// Unlike a standalone server, server's dirs will be under one "$CwtchDir/servers" and use a cwtch style localID to obscure
+// what servers are hosted. Users are of course free to use a default password. This means Config file will be encrypted
+// with cwtch/storage/v1/file_enc and monitor files will not be generated
+type Servers interface {
+	LoadServers(password string) ([]string, error)
+	CreateServer(password string) (Server, error)
+
+	GetServer(onion string) Server
+	ListServers() []string
+	DeleteServer(onion string, currentPassword string) error
+
+	LaunchServers()
+	ShutdownServer(string)
+	Shutdown()
+}
+
+type servers struct {
+	lock      sync.Mutex
+	servers   map[string]Server
+	directory string
+	acn       connectivity.ACN
+}
+
+// NewServers returns a Servers interface to manage a collection of servers
+// expecting directory: $CWTCH_HOME/servers
+func NewServers(acn connectivity.ACN, directory string) Servers {
+	return &servers{acn: acn, directory: directory}
+}
+
+// LoadServers will attempt to load any servers in the servers directory that are encrypted with the supplied password
+// returns a list of onions identifiers for servers loaded or an error
+func (s *servers) LoadServers(password string) ([]string, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	dirs, err := ioutil.ReadDir(s.directory)
+	if err != nil {
+		return nil, fmt.Errorf("error: cannot read server directory: %v", err)
+	}
+
+	loadedServers := []string{}
+	for _, dir := range dirs {
+		newConfig, err := LoadConfig(path.Join(s.directory, dir.Name()), ServerConfigFile, true, password)
+		if err == nil {
+			server := NewServer(newConfig)
+			s.servers[server.Onion()] = server
+			loadedServers = append(loadedServers, server.Onion())
+		}
+	}
+	return loadedServers, nil
+}
+
+// CreateServer creates a new server and stores it, also returns an interface to it
+func (s *servers) CreateServer(password string) (Server, error) {
+	newLocalID := model.GenerateRandomID()
+	directory := path.Join(s.directory, newLocalID)
+	config, err := CreateConfig(directory, ServerConfigFile, true, password)
+	if err != nil {
+		return nil, err
+	}
+	server := NewServer(config)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.servers[server.Onion()] = server
+	return server, nil
+}
+
+// GetServer returns a server interface for the supplied onion
+func (s *servers) GetServer(onion string) Server {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.servers[onion]
+}
+
+// ListServers returns a list of server onion identifies this servers struct is managing
+func (s *servers) ListServers() []string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	list := []string{}
+	for onion := range s.servers {
+		list = append(list, onion)
+	}
+	return list
+}
+
+// DeleteServer delete's the requested server (assuming the passwords match
+func (s *servers) DeleteServer(onion string, password string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	server := s.servers[onion]
+	if server != nil {
+		server.Shutdown()
+		err := server.Delete(password)
+		delete(s.servers, onion)
+		return err
+	}
+	return errors.New("Server not found")
+}
+
+// LaunchServers Run() all loaded servers
+func (s *servers) LaunchServers() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for _, server := range s.servers {
+		server.Run(s.acn)
+	}
+}
+
+// ShutdownServer Shutsdown the specified server
+func (s *servers) ShutdownServer(onion string) {
+	s.servers[onion].Shutdown()
+}
+
+// Shutdown shutsdown all the servers
+func (s *servers) Shutdown() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for _, server := range s.servers {
+		server.Shutdown()
+	}
+}
