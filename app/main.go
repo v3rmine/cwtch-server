@@ -95,8 +95,8 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		server.Shutdown()
 		acn.Close()
-		server.Close()
 		os.Exit(1)
 	}()
 

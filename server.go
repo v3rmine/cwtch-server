@@ -37,13 +37,13 @@ type Server interface {
 	CheckStatus() (bool, error)
 	Shutdown()
 	GetStatistics() Statistics
-	ConfigureAutostart(autostart bool)
-	Close()
 	Delete(password string) error
 	Onion() string
 	Server() string
 	TofuBundle() string
 	HashName() string
+	GetAttribute(string) string
+	SetAttribute(string, string)
 }
 
 type server struct {
@@ -122,6 +122,7 @@ func (s *server) Run(acn connectivity.ACN) error {
 	}()
 
 	s.running = true
+	s.SetAttribute(AttrEnabled, "true")
 	return nil
 }
 
@@ -148,13 +149,16 @@ func (s *server) CheckStatus() (bool, error) {
 
 // Shutdown kills the app closing all connections and freeing all goroutines
 func (s *server) Shutdown() {
+	log.Infof("Shutting down server")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.service.Shutdown()
 	s.tokenTapirService.Shutdown()
+	log.Infof("Closing Token server Database...")
+	s.tokenServer.Close()
 	s.metricsPack.Stop()
 	s.running = true
-
+	s.SetAttribute(AttrEnabled, "false")
 }
 
 // Statistics is an encapsulation of information about the server that an operator might want to know at a glance.
@@ -176,21 +180,6 @@ func (s *server) GetStatistics() Statistics {
 	}
 }
 
-// ConfigureAutostart sets whether this server should autostart (in the Cwtch UI/bundling application)
-func (s *server) ConfigureAutostart(autostart bool) {
-	s.config.AutoStart = autostart
-	s.config.Save()
-}
-
-// Close shuts down the cwtch server in a safe way.
-func (s *server) Close() {
-	log.Infof("Shutting down server")
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	log.Infof("Closing Token server Database...")
-	s.tokenServer.Close()
-}
-
 func (s *server) Delete(password string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -202,7 +191,7 @@ func (s *server) Delete(password string) error {
 }
 
 func (s *server) Onion() string {
-	return tor.GetTorV3Hostname(s.config.PublicKey) + ".onion"
+	return s.config.Onion()
 }
 
 func (s *server) Server() string {
@@ -233,4 +222,14 @@ func (s *server) HashName() string {
 		words = append(words, namesSmall[index])
 	}
 	return strings.Join(words, "-")
+}
+
+// GetAttribute gets a server attribute
+func (s *server) GetAttribute(key string) string {
+	return s.config.GetAttribute(key)
+}
+
+// SetAttribute sets a server attribute
+func (s *server) SetAttribute(key, val string) {
+	s.config.SetAttribute(key, val)
 }

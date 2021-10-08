@@ -5,17 +5,28 @@ import (
 	v1 "cwtch.im/cwtch/storage/v1"
 	"encoding/json"
 	"git.openprivacy.ca/cwtch.im/tapir/primitives"
+	"git.openprivacy.ca/openprivacy/connectivity/tor"
 	"git.openprivacy.ca/openprivacy/log"
 	"github.com/gtank/ristretto255"
 	"golang.org/x/crypto/ed25519"
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 )
 
 const (
 	// SaltFile is the standard filename to store an encrypted config's SALT under beside it
 	SaltFile = "SALT"
+
+	// AttrAutostart is the attribute key for autostart setting
+	AttrAutostart = "autostart"
+
+	// AttrDescription is the attribute key for a user set server description
+	AttrDescription = "description"
+
+	// AttrEnabled is the attribute key for user toggle of server being enabled
+	AttrEnabled = "enabled"
 )
 
 // Reporting is a struct for storing a the config a server needs to be a peer, and connect to a group to report
@@ -42,7 +53,9 @@ type Config struct {
 	TokenServiceK ristretto255.Scalar `json:"tokenServiceK"`
 
 	ServerReporting Reporting `json:"serverReporting"`
-	AutoStart       bool      `json:"autostart"`
+
+	attributes map[string]string
+	lock       sync.Mutex
 }
 
 // Identity returns an encapsulation of the servers keys
@@ -55,8 +68,8 @@ func (config *Config) TokenServiceIdentity() primitives.Identity {
 	return primitives.InitializeIdentity("", &config.TokenServerPrivateKey, &config.TokenServerPublicKey)
 }
 
-func initDefaultConfig(configDir, filename string, encrypted bool) Config {
-	config := Config{Encrypted: encrypted, ConfigDir: configDir, FilePath: filename}
+func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
+	config := &Config{Encrypted: encrypted, ConfigDir: configDir, FilePath: filename}
 
 	id, pk := primitives.InitializeEphemeralIdentity()
 	tid, tpk := primitives.InitializeEphemeralIdentity()
@@ -70,7 +83,8 @@ func initDefaultConfig(configDir, filename string, encrypted bool) Config {
 		ReportingGroupID:    "",
 		ReportingServerAddr: "",
 	}
-	config.AutoStart = false
+	config.attributes[AttrAutostart] = "false"
+	config.attributes[AttrEnabled] = "true"
 
 	k := new(ristretto255.Scalar)
 	b := make([]byte, 64)
@@ -108,7 +122,7 @@ func CreateConfig(configDir, filename string, encrypted bool, password string) (
 	}
 
 	config.Save()
-	return &config, nil
+	return config, nil
 }
 
 // LoadConfig loads a Config from a json file specified by filename
@@ -142,7 +156,7 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 
 	// Always save (first time generation, new version with new variables populated)
 	config.Save()
-	return &config, nil
+	return config, nil
 }
 
 // Save dumps the latest version of the config to a json file given by filename
@@ -164,4 +178,24 @@ func (config *Config) CheckPassword(checkpass string) bool {
 	}
 	oldkey := v1.CreateKey(checkpass, salt[:])
 	return oldkey == config.key
+}
+
+// Onion returns the .onion url for the server
+func (config *Config) Onion() string {
+	return tor.GetTorV3Hostname(config.PublicKey) + ".onion"
+}
+
+// SetAttribute sets a server attribute
+func (config *Config) SetAttribute(key, val string) {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	config.attributes[key] = val
+	config.Save()
+}
+
+// GetAttribute gets a server attribute
+func (config *Config) GetAttribute(key string) string {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	return config.attributes[key]
 }

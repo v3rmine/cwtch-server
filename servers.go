@@ -22,7 +22,7 @@ type Servers interface {
 	ListServers() []string
 	DeleteServer(onion string, currentPassword string) error
 
-	LaunchServers()
+	LaunchServer(string)
 	ShutdownServer(string)
 	Shutdown()
 }
@@ -54,7 +54,7 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 	loadedServers := []string{}
 	for _, dir := range dirs {
 		newConfig, err := LoadConfig(path.Join(s.directory, dir.Name()), ServerConfigFile, true, password)
-		if err == nil {
+		if _, exists := s.servers[newConfig.Onion()]; err == nil && !exists {
 			server := NewServer(newConfig)
 			s.servers[server.Onion()] = server
 			loadedServers = append(loadedServers, server.Onion())
@@ -110,11 +110,11 @@ func (s *servers) DeleteServer(onion string, password string) error {
 	return errors.New("Server not found")
 }
 
-// LaunchServers Run() all loaded servers
-func (s *servers) LaunchServers() {
+// LaunchServer Run() the specified server
+func (s *servers) LaunchServer(onion string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	for _, server := range s.servers {
+	if server, exists := s.servers[onion]; exists {
 		server.Run(s.acn)
 	}
 }

@@ -10,10 +10,14 @@ git.openprivacy.ca/cwtch.im/tapir v0.4.1 h1:9LMpQX41IzecNNlRc1FZKXHg6wlFss679tFs
 git.openprivacy.ca/cwtch.im/tapir v0.4.1/go.mod h1:eH6dZxXrhW0C4KZX18ksUa6XJCrEvtg8cJJ/Fy6gv+E=
 git.openprivacy.ca/cwtch.im/tapir v0.4.2 h1:bxMWZnVJXX4dqqOFS7ELW4iFkVL4GS8wiRkjRv5rJe8=
 git.openprivacy.ca/cwtch.im/tapir v0.4.2/go.mod h1:eH6dZxXrhW0C4KZX18ksUa6XJCrEvtg8cJJ/Fy6gv+E=
+git.openprivacy.ca/cwtch.im/tapir v0.4.4 h1:KyuTVmr9GYptTCeR7JDODjmhBBbnIBf9V3NSC4+6bHc=
+git.openprivacy.ca/cwtch.im/tapir v0.4.4/go.mod h1:qMFTdmDZITc1BLP1jSW0gVpLmvpg+Zjsh5ek8StwbFE=
 git.openprivacy.ca/openprivacy/bine v0.0.4 h1:CO7EkGyz+jegZ4ap8g5NWRuDHA/56KKvGySR6OBPW+c=
 git.openprivacy.ca/openprivacy/bine v0.0.4/go.mod h1:13ZqhKyqakDsN/ZkQkIGNULsmLyqtXc46XBcnuXm/mU=
 git.openprivacy.ca/openprivacy/connectivity v1.4.3 h1:i2Ad/U9FlL9dKr2bhRck7lJ8NoWyGtoEfUwoCyMT0fU=
 git.openprivacy.ca/openprivacy/connectivity v1.4.3/go.mod h1:bR0Myx9nm2YzWtsThRelkNMV4Pp7sPDa123O1qsAbVo=
+git.openprivacy.ca/openprivacy/connectivity v1.4.5 h1:UYMdCWPzEAP7LbqdMXGNXmfKjWlvfnKdmewBtnbgQRI=
+git.openprivacy.ca/openprivacy/connectivity v1.4.5/go.mod h1:JVRCIdL+lAG6ohBFWiKeC/MN42nnC0sfFszR9XG6vPQ=
 git.openprivacy.ca/openprivacy/log v1.0.1/go.mod h1:gGYK8xHtndRLDymFtmjkG26GaMQNgyhioNS82m812Iw=
 git.openprivacy.ca/openprivacy/log v1.0.2 h1:HLP4wsw4ljczFAelYnbObIs821z+jgMPCe8uODPnGQM=
 git.openprivacy.ca/openprivacy/log v1.0.2/go.mod h1:gGYK8xHtndRLDymFtmjkG26GaMQNgyhioNS82m812Iw=
