@@ -81,9 +81,9 @@ func main() {
 
 	server := cwtchserver.NewServer(serverConfig)
 	log.Infoln("starting cwtch server...")
-	log.Infof("Server 'hash name': %s\n", server.HashName())
+	log.Infof("Server %s\n", server.Onion())
 
-	log.Infof("Server bundle (import into client to use server): %s\n", log.Magenta(server.Server()))
+	log.Infof("Server bundle (import into client to use server): %s\n", log.Magenta(server.ServerBundle()))
 
 	if *flagExportTofu {
 		// Todo: change all to server export

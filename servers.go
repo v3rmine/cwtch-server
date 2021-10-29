@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"git.openprivacy.ca/openprivacy/connectivity"
+	"git.openprivacy.ca/openprivacy/log"
 	"io/ioutil"
 	"path"
 	"sync"
@@ -37,7 +38,7 @@ type servers struct {
 // NewServers returns a Servers interface to manage a collection of servers
 // expecting directory: $CWTCH_HOME/servers
 func NewServers(acn connectivity.ACN, directory string) Servers {
-	return &servers{acn: acn, directory: directory}
+	return &servers{acn: acn, directory: directory, servers: make(map[string]Server)}
 }
 
 // LoadServers will attempt to load any servers in the servers directory that are encrypted with the supplied password
@@ -50,16 +51,19 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error: cannot read server directory: %v", err)
 	}
-
 	loadedServers := []string{}
 	for _, dir := range dirs {
 		newConfig, err := LoadConfig(path.Join(s.directory, dir.Name()), ServerConfigFile, true, password)
-		if _, exists := s.servers[newConfig.Onion()]; err == nil && !exists {
-			server := NewServer(newConfig)
-			s.servers[server.Onion()] = server
-			loadedServers = append(loadedServers, server.Onion())
+		if err == nil {
+			if _, exists := s.servers[newConfig.Onion()]; !exists {
+				log.Debugf("Loaded config, building  server for %s\n", newConfig.Onion())
+				server := NewServer(newConfig)
+				s.servers[server.Onion()] = server
+				loadedServers = append(loadedServers, server.Onion())
+			}
 		}
 	}
+	log.Infof("LoadServers returning: %s\n", loadedServers)
 	return loadedServers, nil
 }
 

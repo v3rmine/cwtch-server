@@ -4,7 +4,6 @@ import (
 	"crypto/ed25519"
 	"cwtch.im/cwtch/model"
 	"encoding/base64"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"git.openprivacy.ca/cwtch.im/server/metrics"
@@ -20,7 +19,6 @@ import (
 	"git.openprivacy.ca/openprivacy/log"
 	"os"
 	"path"
-	"strings"
 	"sync"
 )
 
@@ -39,9 +37,8 @@ type Server interface {
 	GetStatistics() Statistics
 	Delete(password string) error
 	Onion() string
-	Server() string
+	ServerBundle() string
 	TofuBundle() string
-	HashName() string
 	GetAttribute(string) string
 	SetAttribute(string, string)
 }
@@ -152,13 +149,15 @@ func (s *server) Shutdown() {
 	log.Infof("Shutting down server")
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.service.Shutdown()
-	s.tokenTapirService.Shutdown()
-	log.Infof("Closing Token server Database...")
-	s.tokenServer.Close()
-	s.metricsPack.Stop()
-	s.running = true
-	s.SetAttribute(AttrEnabled, "false")
+	if s.running {
+		s.service.Shutdown()
+		s.tokenTapirService.Shutdown()
+		log.Infof("Closing Token server Database...")
+		s.tokenServer.Close()
+		s.metricsPack.Stop()
+		s.running = false
+		s.SetAttribute(AttrEnabled, "false")
+	}
 }
 
 // Statistics is an encapsulation of information about the server that an operator might want to know at a glance.
@@ -194,11 +193,13 @@ func (s *server) Onion() string {
 	return s.config.Onion()
 }
 
-func (s *server) Server() string {
+// ServerBundle returns a bundle of the server keys required to access it (torv3 keys are addresses)
+func (s *server) ServerBundle() string {
 	bundle := s.KeyBundle().Serialize()
 	return fmt.Sprintf("server:%s", base64.StdEncoding.EncodeToString(bundle))
 }
 
+// TofuBundle returns a Server Bundle + a newly created group invite
 func (s *server) TofuBundle() string {
 	group, _ := model.NewGroup(tor.GetTorV3Hostname(s.config.PublicKey))
 	invite, err := group.Invite()
@@ -207,21 +208,6 @@ func (s *server) TofuBundle() string {
 	}
 	bundle := s.KeyBundle().Serialize()
 	return fmt.Sprintf("tofubundle:server:%s||%s", base64.StdEncoding.EncodeToString(bundle), invite)
-}
-
-// TODO demo implementation only, not nearly enough entropy
-// TODO Apache license
-// https://github.com/dustinkirkland/petname/blob/master/usr/share/petname/small/names.txt
-var namesSmall = []string{"ox", "ant", "ape", "asp", "bat", "bee", "boa", "bug", "cat", "cod", "cow", "cub", "doe", "dog", "eel", "eft", "elf", "elk", "emu", "ewe", "fly", "fox", "gar", "gnu", "hen", "hog", "imp", "jay", "kid", "kit", "koi", "lab", "man", "owl", "pig", "pug", "pup", "ram", "rat", "ray", "yak", "bass", "bear", "bird", "boar", "buck", "bull", "calf", "chow", "clam", "colt", "crab", "crow", "dane", "deer", "dodo", "dory", "dove", "drum", "duck", "fawn", "fish", "flea", "foal", "fowl", "frog", "gnat", "goat", "grub", "gull", "hare", "hawk", "ibex", "joey", "kite", "kiwi", "lamb", "lark", "lion", "loon", "lynx", "mako", "mink", "mite", "mole", "moth", "mule", "mutt", "newt", "orca", "oryx", "pika", "pony", "puma", "seal", "shad", "slug", "sole", "stag", "stud", "swan", "tahr", "teal", "tick", "toad", "tuna", "wasp", "wolf", "worm", "wren", "yeti", "adder", "akita", "alien", "aphid", "bison", "boxer", "bream", "bunny", "burro", "camel", "chimp", "civet", "cobra", "coral", "corgi", "crane", "dingo", "drake", "eagle", "egret", "filly", "finch", "gator", "gecko", "ghost", "ghoul", "goose", "guppy", "heron", "hippo", "horse", "hound", "husky", "hyena", "koala", "krill", "leech", "lemur", "liger", "llama", "louse", "macaw", "midge", "molly", "moose", "moray", "mouse", "panda", "perch", "prawn", "quail", "racer", "raven", "rhino", "robin", "satyr", "shark", "sheep", "shrew", "skink", "skunk", "sloth", "snail", "snake", "snipe", "squid", "stork", "swift", "swine", "tapir", "tetra", "tiger", "troll", "trout", "viper", "wahoo", "whale", "zebra", "alpaca", "amoeba", "baboon", "badger", "beagle", "bedbug", "beetle", "bengal", "bobcat", "caiman", "cattle", "cicada", "collie", "condor", "cougar", "coyote", "dassie", "donkey", "dragon", "earwig", "falcon", "feline", "ferret", "gannet", "gibbon", "glider", "goblin", "gopher", "grouse", "guinea", "hermit", "hornet", "iguana", "impala", "insect", "jackal", "jaguar", "jennet", "kitten", "kodiak", "lizard", "locust", "maggot", "magpie", "mammal", "mantis", "marlin", "marmot", "marten", "martin", "mayfly", "minnow", "monkey", "mullet", "muskox", "ocelot", "oriole", "osprey", "oyster", "parrot", "pigeon", "piglet", "poodle", "possum", "python", "quagga", "rabbit", "raptor", "rodent", "roughy", "salmon", "sawfly", "serval", "shiner", "shrimp", "spider", "sponge", "tarpon", "thrush", "tomcat", "toucan", "turkey", "turtle", "urchin", "vervet", "walrus", "weasel", "weevil", "wombat", "anchovy", "anemone", "bluejay", "buffalo", "bulldog", "buzzard", "caribou", "catfish", "chamois", "cheetah", "chicken", "chigger", "cowbird", "crappie", "crawdad", "cricket", "dogfish", "dolphin", "firefly", "garfish", "gazelle", "gelding", "giraffe", "gobbler", "gorilla", "goshawk", "grackle", "griffon", "grizzly", "grouper", "haddock", "hagfish", "halibut", "hamster", "herring", "jackass", "javelin", "jawfish", "jaybird", "katydid", "ladybug", "lamprey", "lemming", "leopard", "lioness", "lobster", "macaque", "mallard", "mammoth", "manatee", "mastiff", "meerkat", "mollusk", "monarch", "mongrel", "monitor", "monster", "mudfish", "muskrat", "mustang", "narwhal", "oarfish", "octopus", "opossum", "ostrich", "panther", "peacock", "pegasus", "pelican", "penguin", "phoenix", "piranha", "polecat", "primate", "quetzal", "raccoon", "rattler", "redbird", "redfish", "reptile", "rooster", "sawfish", "sculpin", "seagull", "skylark", "snapper", "spaniel", "sparrow", "sunbeam", "sunbird", "sunfish", "tadpole", "termite", "terrier", "unicorn", "vulture", "wallaby", "walleye", "warthog", "whippet", "wildcat", "aardvark", "airedale", "albacore", "anteater", "antelope", "arachnid", "barnacle", "basilisk", "blowfish", "bluebird", "bluegill", "bonefish", "bullfrog", "cardinal", "chipmunk", "cockatoo", "crayfish", "dinosaur", "doberman", "duckling", "elephant", "escargot", "flamingo", "flounder", "foxhound", "glowworm", "goldfish", "grubworm", "hedgehog", "honeybee", "hookworm", "humpback", "kangaroo", "killdeer", "kingfish", "labrador", "lacewing", "ladybird", "lionfish", "longhorn", "mackerel", "malamute", "marmoset", "mastodon", "moccasin", "mongoose", "monkfish", "mosquito", "pangolin", "parakeet", "pheasant", "pipefish", "platypus", "polliwog", "porpoise", "reindeer", "ringtail", "sailfish", "scorpion", "seahorse", "seasnail", "sheepdog", "shepherd", "silkworm", "squirrel", "stallion", "starfish", "starling", "stingray", "stinkbug", "sturgeon", "terrapin", "titmouse", "tortoise", "treefrog", "werewolf", "woodcock"}
-
-func (s *server) HashName() string {
-	var bytes []byte = s.config.PublicKey
-	var words []string
-	for i := 0; i < 8; i++ {
-		index := int(binary.BigEndian.Uint32(bytes[i*4:(i+1)*4])) % len(namesSmall)
-		words = append(words, namesSmall[index])
-	}
-	return strings.Join(words, "-")
 }
 
 // GetAttribute gets a server attribute

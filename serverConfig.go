@@ -27,6 +27,20 @@ const (
 
 	// AttrEnabled is the attribute key for user toggle of server being enabled
 	AttrEnabled = "enabled"
+
+	// AttrStorageType is used by clients that may need info about stored server config types/styles
+	AttrStorageType = "storageType"
+)
+
+const (
+	// StorageTypeDefaultPassword is a AttrStorageType that indicated a app default password was used
+	StorageTypeDefaultPassword = "storage-default-password"
+
+	// StorageTypePassword is a AttrStorageType that indicated a user password was used to protect the profile
+	StorageTypePassword = "storage-password"
+
+	// StoreageTypeNoPassword is a AttrStorageType that indicated a no password was used to protect the profile
+	StoreageTypeNoPassword = "storage-no-password"
 )
 
 // Reporting is a struct for storing a the config a server needs to be a peer, and connect to a group to report
@@ -54,8 +68,10 @@ type Config struct {
 
 	ServerReporting Reporting `json:"serverReporting"`
 
-	attributes map[string]string
-	lock       sync.Mutex
+	Attributes map[string]string `json:"attributes"`
+
+	lock         sync.Mutex
+	encFileStore v1.FileStore
 }
 
 // Identity returns an encapsulation of the servers keys
@@ -69,7 +85,7 @@ func (config *Config) TokenServiceIdentity() primitives.Identity {
 }
 
 func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
-	config := &Config{Encrypted: encrypted, ConfigDir: configDir, FilePath: filename}
+	config := &Config{Encrypted: encrypted, ConfigDir: configDir, FilePath: filename, Attributes: make(map[string]string)}
 
 	id, pk := primitives.InitializeEphemeralIdentity()
 	tid, tpk := primitives.InitializeEphemeralIdentity()
@@ -83,8 +99,8 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 		ReportingGroupID:    "",
 		ReportingServerAddr: "",
 	}
-	config.attributes[AttrAutostart] = "false"
-	config.attributes[AttrEnabled] = "true"
+	config.Attributes[AttrAutostart] = "false"
+	config.Attributes[AttrEnabled] = "true"
 
 	k := new(ristretto255.Scalar)
 	b := make([]byte, 64)
@@ -110,6 +126,7 @@ func LoadCreateDefaultConfigFile(configDir, filename string, encrypted bool, pas
 // CreateConfig creates a default config and saves it to a json file specified by filename
 // if the encrypted flag is true the config is store encrypted by password
 func CreateConfig(configDir, filename string, encrypted bool, password string) (*Config, error) {
+	log.Debugf("CreateConfig for server with configDir: %s\n", configDir)
 	os.Mkdir(configDir, 0700)
 	config := initDefaultConfig(configDir, filename, encrypted)
 	if encrypted {
@@ -119,6 +136,7 @@ func CreateConfig(configDir, filename string, encrypted bool, password string) (
 			return nil, err
 		}
 		config.key = key
+		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, key)
 	}
 
 	config.Save()
@@ -127,23 +145,23 @@ func CreateConfig(configDir, filename string, encrypted bool, password string) (
 
 // LoadConfig loads a Config from a json file specified by filename
 func LoadConfig(configDir, filename string, encrypted bool, password string) (*Config, error) {
-	log.Infof("Loading config from %s\n", path.Join(configDir, filename))
-
 	config := initDefaultConfig(configDir, filename, encrypted)
-
-	raw, err := ioutil.ReadFile(path.Join(configDir, filename))
-	if err != nil {
-		return nil, err
-	}
-
+	var raw []byte
+	var err error
 	if encrypted {
 		salt, err := ioutil.ReadFile(path.Join(configDir, SaltFile))
 		if err != nil {
 			return nil, err
 		}
 		key := v1.CreateKey(password, salt)
-		settingsStore := v1.NewFileStore(configDir, ServerConfigFile, key)
-		raw, err = settingsStore.Read()
+		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, key)
+		raw, err = config.encFileStore.Read()
+		if err != nil {
+			log.Errorf("read enc bytes failed: %s\n", err)
+			return nil, err
+		}
+	} else {
+		raw, err = ioutil.ReadFile(path.Join(configDir, filename))
 		if err != nil {
 			return nil, err
 		}
@@ -161,17 +179,20 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 
 // Save dumps the latest version of the config to a json file given by filename
 func (config *Config) Save() error {
-	log.Infof("Saving config to %s\n", path.Join(config.ConfigDir, config.FilePath))
+	config.lock.Lock()
+	defer config.lock.Unlock()
 	bytes, _ := json.MarshalIndent(config, "", "\t")
 	if config.Encrypted {
-		settingStore := v1.NewFileStore(config.ConfigDir, config.FilePath, config.key)
-		return settingStore.Write(bytes)
+		//settingStore := v1.NewFileStore(config.ConfigDir, config.FilePath, config.key)
+		return config.encFileStore.Write(bytes)
 	}
 	return ioutil.WriteFile(path.Join(config.ConfigDir, config.FilePath), bytes, 0600)
 }
 
 // CheckPassword returns true if the given password produces the same key as the current stored key, otherwise false.
 func (config *Config) CheckPassword(checkpass string) bool {
+	config.lock.Lock()
+	defer config.lock.Unlock()
 	salt, err := ioutil.ReadFile(path.Join(config.ConfigDir, SaltFile))
 	if err != nil {
 		return false
@@ -182,14 +203,16 @@ func (config *Config) CheckPassword(checkpass string) bool {
 
 // Onion returns the .onion url for the server
 func (config *Config) Onion() string {
+	config.lock.Lock()
+	defer config.lock.Unlock()
 	return tor.GetTorV3Hostname(config.PublicKey) + ".onion"
 }
 
 // SetAttribute sets a server attribute
 func (config *Config) SetAttribute(key, val string) {
 	config.lock.Lock()
-	defer config.lock.Unlock()
-	config.attributes[key] = val
+	config.Attributes[key] = val
+	config.lock.Unlock()
 	config.Save()
 }
 
@@ -197,5 +220,5 @@ func (config *Config) SetAttribute(key, val string) {
 func (config *Config) GetAttribute(key string) string {
 	config.lock.Lock()
 	defer config.lock.Unlock()
-	return config.attributes[key]
+	return config.Attributes[key]
 }
