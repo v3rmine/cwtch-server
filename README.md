@@ -8,7 +8,7 @@
 
 The app takes the following arguments
 - -debug: enabled debug logging
-- -exportTofuBundle: Export the tofubundle to a file called tofubundle
+- -exportServerBundle: Export the server bundle to a file called serverbundle
 
 
 The app takes the following environment variables

@@ -19,7 +19,7 @@ import (
 
 func main() {
 	flagDebug := flag.Bool("debug", false, "Enable debug logging")
-	flagExportTofu := flag.Bool("exportTofuBundle", false, "Export the tofubundle to a file called tofubundle")
+	flagExportServer := flag.Bool("exportServerBundle", false, "Export the server bundle to a file called serverbundle")
 	flag.Parse()
 
 	log.AddEverythingFromPattern("server/app/main")
@@ -85,9 +85,9 @@ func main() {
 
 	log.Infof("Server bundle (import into client to use server): %s\n", log.Magenta(server.ServerBundle()))
 
-	if *flagExportTofu {
+	if *flagExportServer {
 		// Todo: change all to server export
-		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "tofubundle"), []byte(server.TofuBundle()), 0600)
+		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.TofuBundle()), 0600)
 	}
 
 	// Graceful Shutdown

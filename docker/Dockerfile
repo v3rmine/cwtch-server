@@ -64,5 +64,5 @@ COPY ./docker/docker-entrypoint /usr/local/bin/
 VOLUME /etc/tor /var/lib/tor /var/lib/cwtch
 
 ENTRYPOINT ["docker-entrypoint"]
-CMD ["/usr/local/bin/cwtch","--exportTofuBundle"]
+CMD ["/usr/local/bin/cwtch","--exportServerBundle"]
 
