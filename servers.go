@@ -46,7 +46,6 @@ func NewServers(acn connectivity.ACN, directory string) Servers {
 func (s *servers) LoadServers(password string) ([]string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	dirs, err := ioutil.ReadDir(s.directory)
 	if err != nil {
 		return nil, fmt.Errorf("error: cannot read server directory: %v", err)
@@ -56,7 +55,7 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 		newConfig, err := LoadConfig(path.Join(s.directory, dir.Name()), ServerConfigFile, true, password)
 		if err == nil {
 			if _, exists := s.servers[newConfig.Onion()]; !exists {
-				log.Debugf("Loaded config, building  server for %s\n", newConfig.Onion())
+				log.Debugf("Loaded config, building server for %s\n", newConfig.Onion())
 				server := NewServer(newConfig)
 				s.servers[server.Onion()] = server
 				loadedServers = append(loadedServers, server.Onion())
@@ -111,7 +110,7 @@ func (s *servers) DeleteServer(onion string, password string) error {
 		delete(s.servers, onion)
 		return err
 	}
-	return errors.New("Server not found")
+	return errors.New("server not found")
 }
 
 // LaunchServer Run() the specified server
@@ -125,6 +124,8 @@ func (s *servers) LaunchServer(onion string) {
 
 // ShutdownServer Shutsdown the specified server
 func (s *servers) ShutdownServer(onion string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.servers[onion].Shutdown()
 }
 

@@ -63,10 +63,6 @@ func NewServer(serverConfig *Config) Server {
 	server := new(server)
 	server.running = false
 	server.config = serverConfig
-	bs := new(persistence.BoltPersistence)
-	bs.Open(path.Join(serverConfig.ConfigDir, "tokens.db"))
-	server.tokenServer = privacypass.NewTokenServerFromStore(&serverConfig.TokenServiceK, bs)
-	log.Infof("Y: %v", server.tokenServer.Y)
 	server.tokenService = server.config.TokenServiceIdentity()
 	server.tokenServicePrivKey = server.config.TokenServerPrivateKey
 	return server
@@ -84,6 +80,11 @@ func (s *server) Run(acn connectivity.ACN) error {
 	if s.running {
 		return nil
 	}
+
+	bs := new(persistence.BoltPersistence)
+	bs.Open(path.Join(s.config.ConfigDir, "tokens.db"))
+	s.tokenServer = privacypass.NewTokenServerFromStore(&s.config.TokenServiceK, bs)
+	log.Infof("Y: %v", s.tokenServer.Y)
 
 	identity := primitives.InitializeIdentity("", &s.config.PrivateKey, &s.config.PublicKey)
 	var service tapir.Service

@@ -132,7 +132,7 @@ func CreateConfig(configDir, filename string, encrypted bool, password string) (
 	if encrypted {
 		key, _, err := v1.InitV1Directory(configDir, password)
 		if err != nil {
-			log.Errorf("Could not create server directory: %s", err)
+			log.Errorf("could not create server directory: %s", err)
 			return nil, err
 		}
 		config.key = key
@@ -183,7 +183,6 @@ func (config *Config) Save() error {
 	defer config.lock.Unlock()
 	bytes, _ := json.MarshalIndent(config, "", "\t")
 	if config.Encrypted {
-		//settingStore := v1.NewFileStore(config.ConfigDir, config.FilePath, config.key)
 		return config.encFileStore.Write(bytes)
 	}
 	return ioutil.WriteFile(path.Join(config.ConfigDir, config.FilePath), bytes, 0600)
