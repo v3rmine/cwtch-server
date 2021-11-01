@@ -33,7 +33,8 @@ type Server interface {
 	Run(acn connectivity.ACN) error
 	KeyBundle() *model.KeyBundle
 	CheckStatus() (bool, error)
-	Shutdown()
+	Stop()
+	Destroy()
 	GetStatistics() Statistics
 	Delete(password string) error
 	Onion() string
@@ -65,6 +66,10 @@ func NewServer(serverConfig *Config) Server {
 	server.config = serverConfig
 	server.tokenService = server.config.TokenServiceIdentity()
 	server.tokenServicePrivKey = server.config.TokenServerPrivateKey
+	bs := new(persistence.BoltPersistence)
+	bs.Open(path.Join(serverConfig.ConfigDir, "tokens.db"))
+	server.tokenServer = privacypass.NewTokenServerFromStore(&serverConfig.TokenServiceK, bs)
+	log.Infof("Y: %v", server.tokenServer.Y)
 	return server
 }
 
@@ -80,11 +85,6 @@ func (s *server) Run(acn connectivity.ACN) error {
 	if s.running {
 		return nil
 	}
-
-	bs := new(persistence.BoltPersistence)
-	bs.Open(path.Join(s.config.ConfigDir, "tokens.db"))
-	s.tokenServer = privacypass.NewTokenServerFromStore(&s.config.TokenServiceK, bs)
-	log.Infof("Y: %v", s.tokenServer.Y)
 
 	identity := primitives.InitializeIdentity("", &s.config.PrivateKey, &s.config.PublicKey)
 	var service tapir.Service
@@ -145,8 +145,9 @@ func (s *server) CheckStatus() (bool, error) {
 	return s.running, nil
 }
 
-// Shutdown kills the app closing all connections and freeing all goroutines
-func (s *server) Shutdown() {
+// Stop turns off the server so it cannot receive connections and frees most resourses.
+// The server is still in a reRunable state and tokenServer still has an active persistance
+func (s *server) Stop() {
 	log.Infof("Shutting down server")
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -154,11 +155,19 @@ func (s *server) Shutdown() {
 		s.service.Shutdown()
 		s.tokenTapirService.Shutdown()
 		log.Infof("Closing Token server Database...")
-		s.tokenServer.Close()
+
 		s.metricsPack.Stop()
 		s.running = false
 		s.SetAttribute(AttrEnabled, "false")
 	}
+}
+
+// Destroy frees the last of the resources the server has active (toklenServer persistance) leaving it un-re-runable and completely shutdown
+func (s *server) Destroy() {
+	s.Stop()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.tokenServer.Close()
 }
 
 // Statistics is an encapsulation of information about the server that an operator might want to know at a glance.
