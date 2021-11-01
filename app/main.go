@@ -2,10 +2,8 @@ package main
 
 import (
 	"crypto/rand"
-	"cwtch.im/cwtch/model"
 	"encoding/base64"
 	"flag"
-	"fmt"
 	cwtchserver "git.openprivacy.ca/cwtch.im/server"
 	"git.openprivacy.ca/cwtch.im/tapir/primitives"
 	"git.openprivacy.ca/openprivacy/connectivity/tor"
@@ -19,13 +17,9 @@ import (
 	"time"
 )
 
-const (
-	serverConfigFile = "serverConfig.json"
-)
-
 func main() {
 	flagDebug := flag.Bool("debug", false, "Enable debug logging")
-	flagExportTofu := flag.Bool("exportTofuBundle", false, "Export the tofubundle to a file called tofubundle")
+	flagExportServer := flag.Bool("exportServerBundle", false, "Export the server bundle to a file called serverbundle")
 	flag.Parse()
 
 	log.AddEverythingFromPattern("server/app/main")
@@ -52,19 +46,25 @@ func main() {
 			ReportingGroupID:    "",
 			ReportingServerAddr: "",
 		}
-		config.Save(".", "serverConfig.json")
+		config.ConfigDir = "."
+		config.FilePath = cwtchserver.ServerConfigFile
+		config.Encrypted = false
+		config.Save()
 		return
 	}
 
-	serverConfig := cwtchserver.LoadConfig(configDir, serverConfigFile)
-
+	serverConfig, err := cwtchserver.LoadCreateDefaultConfigFile(configDir, cwtchserver.ServerConfigFile, false, "")
+	if err != nil {
+		log.Errorf("Could not load/create config file: %s\n", err)
+		return
+	}
 	// we don't need real randomness for the port, just to avoid a possible conflict...
 	mrand.Seed(int64(time.Now().Nanosecond()))
 	controlPort := mrand.Intn(1000) + 9052
 
 	// generate a random password
 	key := make([]byte, 64)
-	_, err := rand.Read(key)
+	_, err = rand.Read(key)
 	if err != nil {
 		panic(err)
 	}
@@ -79,25 +79,15 @@ func main() {
 	}
 	defer acn.Close()
 
-	server := new(cwtchserver.Server)
+	server := cwtchserver.NewServer(serverConfig)
 	log.Infoln("starting cwtch server...")
+	log.Infof("Server %s\n", server.Onion())
 
-	server.Setup(serverConfig)
+	log.Infof("Server bundle (import into client to use server): %s\n", log.Magenta(server.ServerBundle()))
 
-	// TODO create a random group for testing
-	group, _ := model.NewGroup(tor.GetTorV3Hostname(serverConfig.PublicKey))
-	invite, err := group.Invite()
-	if err != nil {
-		panic(err)
-	}
-
-	bundle := server.KeyBundle().Serialize()
-	tofubundle := fmt.Sprintf("tofubundle:server:%s||%s", base64.StdEncoding.EncodeToString(bundle), invite)
-	log.Infof("Server Tofu Bundle (import into client to use server): %s", log.Magenta(tofubundle))
-	log.Infof("Server Config: server address:%s", base64.StdEncoding.EncodeToString(bundle))
-
-	if *flagExportTofu {
-		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "tofubundle"), []byte(tofubundle), 0600)
+	if *flagExportServer {
+		// Todo: change all to server export
+		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.TofuBundle()), 0600)
 	}
 
 	// Graceful Shutdown
@@ -105,8 +95,8 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		server.Shutdown()
 		acn.Close()
-		server.Close()
 		os.Exit(1)
 	}()
 

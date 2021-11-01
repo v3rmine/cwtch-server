@@ -2,10 +2,10 @@ package storage
 
 import (
 	"cwtch.im/cwtch/protocol/groups"
-	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"git.openprivacy.ca/openprivacy/log"
 	_ "github.com/mattn/go-sqlite3" // sqlite3 driver
 )

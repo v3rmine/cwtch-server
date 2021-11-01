@@ -2,8 +2,8 @@ package storage
 
 import (
 	"cwtch.im/cwtch/protocol/groups"
-	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"encoding/binary"
+	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"git.openprivacy.ca/openprivacy/log"
 	"os"
 	"testing"
