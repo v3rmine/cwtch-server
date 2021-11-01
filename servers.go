@@ -24,8 +24,9 @@ type Servers interface {
 	DeleteServer(onion string, currentPassword string) error
 
 	LaunchServer(string)
-	ShutdownServer(string)
-	Shutdown()
+	StopServer(string)
+	Stop()
+	Destroy()
 }
 
 type servers struct {
@@ -105,7 +106,7 @@ func (s *servers) DeleteServer(onion string, password string) error {
 	defer s.lock.Unlock()
 	server := s.servers[onion]
 	if server != nil {
-		server.Shutdown()
+		server.Destroy()
 		err := server.Delete(password)
 		delete(s.servers, onion)
 		return err
@@ -122,18 +123,27 @@ func (s *servers) LaunchServer(onion string) {
 	}
 }
 
-// ShutdownServer Shutsdown the specified server
-func (s *servers) ShutdownServer(onion string) {
+// StopServer stops the specified server
+func (s *servers) StopServer(onion string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.servers[onion].Shutdown()
+	s.servers[onion].Stop()
 }
 
-// Shutdown shutsdown all the servers
-func (s *servers) Shutdown() {
+// Stop stops all the servers
+func (s *servers) Stop() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	for _, server := range s.servers {
-		server.Shutdown()
+		server.Stop()
+	}
+}
+
+// Destroy destroys all the servers
+func (s *servers) Destroy() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for _, server := range s.servers {
+		server.Destroy()
 	}
 }

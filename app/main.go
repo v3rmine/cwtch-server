@@ -90,12 +90,12 @@ func main() {
 		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.TofuBundle()), 0600)
 	}
 
-	// Graceful Shutdown
+	// Graceful Stop
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		server.Shutdown()
+		server.Destroy()
 		acn.Close()
 		os.Exit(1)
 	}()

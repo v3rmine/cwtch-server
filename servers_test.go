@@ -14,12 +14,12 @@ const TestServerDesc = "a test Server"
 
 func TestServers(t *testing.T) {
 	log.SetLevel(log.LevelDebug)
-	log.Infof("clean up / setup...\n")
+	log.Infof("clean up / setup...")
 	os.RemoveAll(TestDir)
 	os.Mkdir(TestDir, 0700)
 
 	acn := connectivity.NewLocalACN()
-	log.Infof("NewServers()...\n")
+	log.Infof("NewServers()...")
 	servers := NewServers(acn, TestDir)
 	s, err := servers.CreateServer(DefaultPassword)
 	if err != nil {
@@ -29,13 +29,13 @@ func TestServers(t *testing.T) {
 	s.SetAttribute(AttrDescription, TestServerDesc)
 	serverOnion := s.Onion()
 
-	s.Shutdown()
+	s.Destroy()
 
-	log.Infof("NewServers()...\n" )
+	log.Infof("NewServers()...")
 	servers2 := NewServers(acn, TestDir)
-	log.Infof("LoadServers()...\n")
+	log.Infof("LoadServers()...")
 	list, err := servers2.LoadServers(DefaultPassword)
-	log.Infof("Loaded!\n")
+	log.Infof("Loaded!")
 	if err != nil {
 		t.Errorf("clould not load server: %s", err)
 		return
@@ -54,6 +54,6 @@ func TestServers(t *testing.T) {
 		t.Errorf("expected server description of '%s' but got '%s'", TestServerDesc, s1.GetAttribute(AttrDescription))
 	}
 
-	servers2.Shutdown()
+	servers2.Destroy()
 	os.RemoveAll(TestDir)
 }
