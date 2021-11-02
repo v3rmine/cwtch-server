@@ -25,9 +25,6 @@ const (
 	// AttrDescription is the attribute key for a user set server description
 	AttrDescription = "description"
 
-	// AttrEnabled is the attribute key for user toggle of server being enabled
-	AttrEnabled = "enabled"
-
 	// AttrStorageType is used by clients that may need info about stored server config types/styles
 	AttrStorageType = "storageType"
 )
@@ -100,7 +97,6 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 		ReportingServerAddr: "",
 	}
 	config.Attributes[AttrAutostart] = "false"
-	config.Attributes[AttrEnabled] = "true"
 
 	k := new(ristretto255.Scalar)
 	b := make([]byte, 64)
