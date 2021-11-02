@@ -120,7 +120,6 @@ func (s *server) Run(acn connectivity.ACN) error {
 	}()
 
 	s.running = true
-	s.SetAttribute(AttrEnabled, "true")
 	return nil
 }
 
@@ -158,7 +157,6 @@ func (s *server) Stop() {
 
 		s.metricsPack.Stop()
 		s.running = false
-		s.SetAttribute(AttrEnabled, "false")
 	}
 }
 
