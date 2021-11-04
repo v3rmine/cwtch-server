@@ -149,11 +149,12 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 		if err != nil {
 			return nil, err
 		}
-		key := v1.CreateKey(password, salt)
-		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, key)
+		config.key = v1.CreateKey(password, salt)
+		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, config.key)
 		raw, err = config.encFileStore.Read()
 		if err != nil {
-			log.Errorf("read enc bytes failed: %s\n", err)
+			// Not an error to log as load config is called blindly across all dirs with a password to see what it applies to
+			log.Debugf("read enc bytes failed: %s\n", err)
 			return nil, err
 		}
 	} else {

@@ -189,10 +189,13 @@ func (s *server) GetStatistics() Statistics {
 
 func (s *server) Delete(password string) error {
 	s.lock.Lock()
-	defer s.lock.Unlock()
 	if s.config.Encrypted && !s.config.CheckPassword(password) {
+		s.lock.Unlock()
+		log.Errorf("encryped and checkpassword failed")
 		return errors.New("Cannot delete server, passwords do not match")
 	}
+	s.lock.Unlock()
+	s.Destroy()
 	os.RemoveAll(s.config.ConfigDir)
 	return nil
 }
