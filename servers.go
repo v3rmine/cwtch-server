@@ -106,9 +106,10 @@ func (s *servers) DeleteServer(onion string, password string) error {
 	defer s.lock.Unlock()
 	server := s.servers[onion]
 	if server != nil {
-		server.Destroy()
 		err := server.Delete(password)
-		delete(s.servers, onion)
+		if err == nil {
+			delete(s.servers, onion)
+		}
 		return err
 	}
 	return errors.New("server not found")
@@ -127,7 +128,9 @@ func (s *servers) LaunchServer(onion string) {
 func (s *servers) StopServer(onion string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.servers[onion].Stop()
+	if server, exists := s.servers[onion]; exists {
+		server.Stop()
+	}
 }
 
 // Stop stops all the servers
