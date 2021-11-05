@@ -123,7 +123,7 @@ func LoadCreateDefaultConfigFile(configDir, filename string, encrypted bool, pas
 // if the encrypted flag is true the config is store encrypted by password
 func CreateConfig(configDir, filename string, encrypted bool, password string) (*Config, error) {
 	log.Debugf("CreateConfig for server with configDir: %s\n", configDir)
-	os.Mkdir(configDir, 0700)
+	os.MkdirAll(configDir, 0700)
 	config := initDefaultConfig(configDir, filename, encrypted)
 	if encrypted {
 		key, _, err := v1.InitV1Directory(configDir, password)
