@@ -9,7 +9,7 @@ go list ./... | xargs go vet
 echo ""
 echo "Linting:"
 
-go list ./... | xargs golint
+staticcheck ./...
 
 
 echo "Time to format"

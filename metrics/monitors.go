@@ -90,7 +90,7 @@ func (mp *Monitors) report() {
 
 	w := bufio.NewWriter(f)
 
-	fmt.Fprintf(w, "Uptime: %v\n\n", time.Now().Sub(mp.starttime))
+	fmt.Fprintf(w, "Uptime: %v\n\n", time.Since(mp.starttime))
 
 	fmt.Fprintln(w, "messages:")
 	mp.Messages.Report(w)

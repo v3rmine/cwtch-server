@@ -64,7 +64,7 @@ func (s SqliteMessageStore) FetchMessages() []*groups.EncryptedGroupMessage {
 func (s SqliteMessageStore) FetchMessagesFrom(signature []byte) []*groups.EncryptedGroupMessage {
 
 	// If signature is empty then treat this as a complete sync request
-	if signature == nil || len(signature) == 0 {
+	if len(signature) == 0 {
 		return s.FetchMessages()
 	}
 

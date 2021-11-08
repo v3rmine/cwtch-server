@@ -10,7 +10,8 @@ steps:
       - name: deps
         path: /go
     commands:
-      - go get -u golang.org/x/lint/golint
+      #- go get -u golang.org/x/lint/golint
+      - go install honnef.co/go/tools/cmd/staticcheck@latest
       - git fetch --tags
       - go get
       - echo `git describe --tags` > VERSION
@@ -23,7 +24,7 @@ steps:
         path: /go
     commands:
       - go list ./... | xargs go vet
-      - go list ./... | xargs golint -set_exit_status
+      - staticcheck ./...
 
   - name: units-tests
     image: golang
@@ -92,7 +93,6 @@ steps:
         path: /go
     commands:
       - export PATH=$PATH:/usr/local/go/bin
-      - go get -u golang.org/x/lint/golint
       - go get
 
   - name: units-tests
