@@ -78,61 +78,6 @@ trigger:
 
 ---
 kind: pipeline
-type: docker
-name: windows-test
-
-platform:
-  os: windows
-  version: 1809
-
-steps:
-  - name: fetch
-    image: golang
-    volumes:
-      - name: deps
-        path: C:\godeps
-    environment:
-      GOPATH: C:\godeps
-    commands:
-      - go get
-
-  - name: units-tests
-    image: golang
-    volumes:
-      - name: deps
-        path: C:\godeps
-    environment:
-      GOPATH: C:\godeps
-    commands:
-      - go test -race ${1} -v ./metrics
-      - go test -race ${1} -v ./storage
-      - go test -race ${1} -v ./
-
-  - name: test-builda-app
-    image: golang
-    volumes:
-      - name: deps
-        path: C:\godeps
-    environment:
-      GOPATH: C:\godeps
-    commands:
-      - cd app
-      - go build
-
-volumes:
-  # gopath where bin and pkg lives to persist across steps
-  - name: deps
-    temp: {}
-
-trigger:
-  repo: cwtch.im/server
-  branch: trunk
-  event:
-    - push
-    - pull_request
-    - tag
----
-kind: pipeline
 type: exec
 name: mac-test
 
@@ -145,9 +90,8 @@ steps:
     volumes:
       - name: deps
         path: /go
-    environment:
-      PATH: PATH=$PATH:/usr/local/go/bin/
     commands:
+      - export PATH=$PATH:/usr/local/go/bin
       - go get -u golang.org/x/lint/golint
       - go get
 
@@ -155,18 +99,16 @@ steps:
     volumes:
       - name: deps
         path: /go
-    environment:
-      PATH: PATH=$PATH:/usr/local/go/bin/
     commands:
+      - export PATH=$PATH:/usr/local/go/bin
       - sh testing/tests.sh
 
   - name: test-builda-app
     volumes:
       - name: deps
         path: /go
-    environment:
-      PATH: PATH=$PATH:/usr/local/go/bin/
     commands:
+      - export PATH=$PATH:/usr/local/go/bin
       - cd app
       - go build
 
@@ -183,3 +125,5 @@ trigger:
     - pull_request
     - tag
 
+# TODO: windows: but need windows docker containers with
+#  go + gcc to compile sqlite. Will prolly come from likewise work for Cwtch
