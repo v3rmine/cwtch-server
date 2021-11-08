@@ -1,0 +1,77 @@
+---
+kind: pipeline
+type: docker
+name: linux-test
+
+steps:
+  - name: fetch
+    image: golang
+    volumes:
+      - name: deps
+        path: /go
+    commands:
+      - go get -u golang.org/x/lint/golint
+      - git fetch --tags
+      - go get
+      - echo `git describe --tags` > VERSION
+      - echo `date +%G-%m-%d-%H-%M` > BUILDDATE
+
+  - name: quality
+    image: golang
+    volumes:
+      - name: deps
+        path: /go
+    commands:
+      - go list ./... | xargs go vet
+      - go list ./... | xargs golint -set_exit_status
+
+  - name: units-tests
+    image: golang
+    volumes:
+      - name: deps
+        path: /go
+    commands:
+      - sh testing/tests.sh
+
+  - name: test-builda-app
+    image: golang
+    volumes:
+      - name: deps
+        path: /go
+    commands:
+      - cd app
+      - go build
+
+  - name: notify-email
+    image: drillster/drone-email
+    settings:
+      host: build.openprivacy.ca
+      port: 25
+      skip_verify: true
+      from: drone@openprivacy.ca
+    when:
+      status: [failure]
+
+  - name: notify-gogs
+    image: openpriv/drone-gogs
+    when:
+      event: pull_request
+      status: [success, changed, failure]
+    environment:
+      GOGS_ACCOUNT_TOKEN:
+        from_secret: gogs_account_token
+    settings:
+      gogs_url: https://git.openprivacy.ca
+
+volumes:
+  # gopath where bin and pkg lives to persist across steps
+  - name: deps
+    temp: {}
+
+trigger:
+  repo: cwtch.im/server
+  branch: trunk
+  event:
+    - push
+    - pull_request
+    - tag
