@@ -1,5 +1,15 @@
 # Cwtch Server
 
+## Building
+
+Pretty straight forward:
+- build the app in `app/` with `go build`
+- build the docker container in `docker/` with `docker build . -t openpriv/server`
+
+### Windows
+
+The server package relies on sqlite which in turn requires the use of CGO. As per [this issue](https://github.com/golang/go/issues/12029) that means [TDM-GCC](https://jmeubank.github.io/tdm-gcc/download/) is required to be installed and used to compile on Windows
+
 ## Running
 
 - cd app
