@@ -87,8 +87,7 @@ func (s *server) Run(acn connectivity.ACN) error {
 	}
 
 	identity := primitives.InitializeIdentity("", &s.config.PrivateKey, &s.config.PublicKey)
-	var service tapir.Service
-	service = new(tor2.BaseOnionService)
+	service := new(tor2.BaseOnionService)
 	service.Init(acn, s.config.PrivateKey, &identity)
 	s.service = service
 	log.Infof("cwtch server running on cwtch:%s\n", s.Onion())
@@ -138,7 +137,7 @@ func (s *server) KeyBundle() *model.KeyBundle {
 func (s *server) CheckStatus() (bool, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	if s.onionServiceStopped == true || s.tokenServiceStopped == true {
+	if s.onionServiceStopped || s.tokenServiceStopped {
 		return s.running, fmt.Errorf("one of more server components are down: onion:%v token service: %v", s.onionServiceStopped, s.tokenServiceStopped)
 	}
 	return s.running, nil
@@ -192,7 +191,7 @@ func (s *server) Delete(password string) error {
 	if s.config.Encrypted && !s.config.CheckPassword(password) {
 		s.lock.Unlock()
 		log.Errorf("encryped and checkpassword failed")
-		return errors.New("Cannot delete server, passwords do not match")
+		return errors.New("cannot delete server, passwords do not match")
 	}
 	s.lock.Unlock()
 	s.Destroy()

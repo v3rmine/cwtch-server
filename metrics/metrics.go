@@ -179,9 +179,7 @@ func reportLine(t MonitorType, array []float64) string {
 func (mh *monitorHistory) returnCopy(slice []float64) []float64 {
 	retSlice := make([]float64, len(slice))
 	mh.lock.Lock()
-	for i, v := range slice {
-		retSlice[i] = v
-	}
+	copy(retSlice, slice)
 	mh.lock.Unlock()
 	return retSlice
 }
@@ -219,22 +217,22 @@ func (mh *monitorHistory) monitorThread() {
 
 			minuteAvg := rotateAndAccumulate(mh.perMinutePerHour[:], mh.monitor(), mh.monitorAccumulation)
 
-			if time.Now().Sub(mh.timeLastHourRotate) > time.Hour {
+			if time.Since(mh.timeLastHourRotate) > time.Hour {
 				rotateAndAccumulate(mh.perHourForDay[:], minuteAvg, mh.monitorAccumulation)
 				mh.timeLastHourRotate = time.Now()
 			}
 
-			if time.Now().Sub(mh.timeLastDayRotate) > time.Hour*24 {
+			if time.Since(mh.timeLastDayRotate) > time.Hour*24 {
 				rotateAndAccumulate(mh.perDayForWeek[:], accumulate(mh.perHourForDay[:], mh.monitorAccumulation), mh.monitorAccumulation)
 				mh.timeLastDayRotate = time.Now()
 			}
 
-			if time.Now().Sub(mh.timeLastWeekRotate) > time.Hour*24*7 {
+			if time.Since(mh.timeLastWeekRotate) > time.Hour*24*7 {
 				rotateAndAccumulate(mh.perWeekForMonth[:], accumulate(mh.perDayForWeek[:], mh.monitorAccumulation), mh.monitorAccumulation)
 				mh.timeLastWeekRotate = time.Now()
 			}
 
-			if time.Now().Sub(mh.timeLastMonthRotate) > time.Hour*24*7*4 {
+			if time.Since(mh.timeLastMonthRotate) > time.Hour*24*7*4 {
 				rotateAndAccumulate(mh.perMonthForYear[:], accumulate(mh.perWeekForMonth[:], mh.monitorAccumulation), mh.monitorAccumulation)
 				mh.timeLastMonthRotate = time.Now()
 			}
