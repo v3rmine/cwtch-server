@@ -8,6 +8,7 @@ import (
 	"github.com/struCoder/pidusage"
 	"os"
 	"path"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -31,8 +32,8 @@ type Monitors struct {
 }
 
 // Start initializes a Monitors's monitors
-func (mp *Monitors) Start(ts tapir.Service, configDir string, log bool) {
-	mp.log = log
+func (mp *Monitors) Start(ts tapir.Service, configDir string, doLogging bool) {
+	mp.log = doLogging
 	mp.configDir = configDir
 	mp.starttime = time.Now()
 	mp.breakChannel = make(chan bool)
@@ -48,18 +49,36 @@ func (mp *Monitors) Start(ts tapir.Service, configDir string, log bool) {
 	})
 
 	var pidUsageLock sync.Mutex
-	mp.CPU = NewMonitorHistory(Percent, Average, func() float64 {
-		pidUsageLock.Lock()
-		defer pidUsageLock.Unlock()
-		sysInfo, _ := pidusage.GetStat(os.Getpid())
-		return float64(sysInfo.CPU)
-	})
-	mp.Memory = NewMonitorHistory(MegaBytes, Average, func() float64 {
-		pidUsageLock.Lock()
-		defer pidUsageLock.Unlock()
-		sysInfo, _ := pidusage.GetStat(os.Getpid())
-		return float64(sysInfo.Memory)
-	})
+	// pidusage doesn't support windows
+	if runtime.GOOS != "windows" {
+		mp.CPU = NewMonitorHistory(Percent, Average, func() float64 {
+			pidUsageLock.Lock()
+			defer pidUsageLock.Unlock()
+			sysInfo, err := pidusage.GetStat(os.Getpid())
+			if err != nil {
+				log.Errorf("pidusage.GetStat failed with: %s", err)
+				return 0.0
+			}
+			return float64(sysInfo.CPU)
+		})
+		mp.Memory = NewMonitorHistory(MegaBytes, Average, func() float64 {
+			pidUsageLock.Lock()
+			defer pidUsageLock.Unlock()
+			sysInfo, err := pidusage.GetStat(os.Getpid())
+			if err != nil {
+				log.Errorf("pidusage.GetStat failed with: %s", err)
+				return 0.0
+			}
+			return float64(sysInfo.Memory)
+		})
+	} else {
+		mp.CPU = NewMonitorHistory(Percent, Average, func() float64 {
+			return 0.0
+		})
+		mp.Memory = NewMonitorHistory(MegaBytes, Average, func() float64 {
+			return 0.0
+		})
+	}
 
 	// TODO: replace with ts.
 	mp.ClientConns = NewMonitorHistory(Count, Average, func() float64 { return float64(ts.Metrics().ConnectionCount) })
