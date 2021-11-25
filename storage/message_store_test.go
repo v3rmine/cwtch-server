@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"git.openprivacy.ca/openprivacy/log"
+	_ "github.com/mattn/go-sqlite3" // sqlite3 driver
 	"os"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ func TestMessageStore(t *testing.T) {
 	os.Remove(filename)
 	log.SetLevel(log.LevelDebug)
 	counter := metrics.NewCounter()
-	db, err := InitializeSqliteMessageStore(filename, counter)
+	db, err := InitializeSqliteMessageStore(filename, func() { counter.Add(1) })
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}

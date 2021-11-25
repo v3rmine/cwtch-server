@@ -5,22 +5,22 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"git.openprivacy.ca/cwtch.im/server/metrics"
 	"git.openprivacy.ca/openprivacy/log"
-	_ "github.com/mattn/go-sqlite3" // sqlite3 driver
 )
 
 // MessageStoreInterface defines an interface to interact with a store of cwtch messages.
 type MessageStoreInterface interface {
 	AddMessage(groups.EncryptedGroupMessage)
 	FetchMessages() []*groups.EncryptedGroupMessage
+	MessagesCount() int
 	FetchMessagesFrom(signature []byte) []*groups.EncryptedGroupMessage
+	Close()
 }
 
 // SqliteMessageStore is an sqlite3 backed message store
 type SqliteMessageStore struct {
-	messageCounter metrics.Counter
-	database       *sql.DB
+	incMessageCounterFn func()
+	database            *sql.DB
 
 	// Some prepared queries...
 	preparedInsertStatement *sql.Stmt // A Stmt is safe for concurrent use by multiple goroutines.
@@ -36,7 +36,9 @@ func (s *SqliteMessageStore) Close() {
 
 // AddMessage implements the MessageStoreInterface AddMessage for sqlite message store
 func (s *SqliteMessageStore) AddMessage(message groups.EncryptedGroupMessage) {
-	s.messageCounter.Add(1)
+	if s.incMessageCounterFn != nil {
+		s.incMessageCounterFn()
+	}
 	// ignore this clearly invalid message...
 	if len(message.Signature) == 0 {
 		return
@@ -47,6 +49,29 @@ func (s *SqliteMessageStore) AddMessage(message groups.EncryptedGroupMessage) {
 		log.Errorf("%v %q", stmt, err)
 		return
 	}
+}
+
+func (s SqliteMessageStore) MessagesCount() int {
+	rows, err := s.database.Query("SELECT COUNT(*) from messages")
+	if err != nil {
+		log.Errorf("%v", err)
+		return -1
+	}
+	defer rows.Close()
+
+	result := rows.Next()
+	if !result {
+		return -1
+	}
+
+	var rownum int
+	err = rows.Scan(&rownum)
+	if err != nil {
+		log.Errorf("error fetching rows: %v", err)
+		return -1
+	}
+
+	return rownum
 }
 
 // FetchMessages implements the MessageStoreInterface FetchMessages for sqlite message store
@@ -107,7 +132,7 @@ func (s *SqliteMessageStore) compileRows(rows *sql.Rows) []*groups.EncryptedGrou
 
 // InitializeSqliteMessageStore creates a database `dbfile` with the necessary tables (if it doesn't already exist)
 // and returns an open database
-func InitializeSqliteMessageStore(dbfile string, messageCounter metrics.Counter) (*SqliteMessageStore, error) {
+func InitializeSqliteMessageStore(dbfile string, incMessageCounterFn func()) (*SqliteMessageStore, error) {
 	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		log.Errorf("database %v cannot be created or opened %v", dbfile, err)
@@ -123,7 +148,7 @@ func InitializeSqliteMessageStore(dbfile string, messageCounter metrics.Counter)
 	log.Infof("Database Initialized")
 	slms := new(SqliteMessageStore)
 	slms.database = db
-	slms.messageCounter = messageCounter
+	slms.incMessageCounterFn = incMessageCounterFn
 
 	sqlStmt = `INSERT INTO messages(signature, ciphertext) values (?,?);`
 	stmt, err := slms.database.Prepare(sqlStmt)
