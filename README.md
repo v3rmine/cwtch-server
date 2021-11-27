@@ -19,10 +19,12 @@ The server package relies on sqlite which in turn requires the use of CGO. As pe
 The app takes the following arguments
 - -debug: enabled debug logging
 - -exportServerBundle: Export the server bundle to a file called serverbundle
-
+- -disableMetrics: Disable metrics reporting to serverMonitor.txt and associated tracking routines
+- -dir [directory]: specify a directory to store server files (default is current directory) 
 
 The app takes the following environment variables
 - CWTCH_HOME: sets the config dir for the app
+- DISABLE_METRICS: if set to any value ('1') it disables metrics reporting to serverMonitor.txt and associated tracking routines 
 
 `env CONFIG_HOME=./conf ./app`
 
@@ -38,4 +40,10 @@ or run our prebuild ones with
 
 `pull openpriv/cwtch-server`
 
-and run it. It stores all Cwtch data in a Volume at `/var/lib/cwtch`
+and run it. It stores all Cwtch data in a Volume at `/var/lib/cwtch` so if you want the server data to persist you would run
+
+`docker run openpriv/cwtch-server -v /var/lib/cwtch/server01:/var/lib/cwtch`
+
+to create a persistent container you might try a command like:
+
+`docker run openpriv/cwtch-server --name cwtch -v /var/lib/cwtch/server01:/var/lib/cwtch --restart always`

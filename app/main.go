@@ -21,6 +21,8 @@ import (
 func main() {
 	flagDebug := flag.Bool("debug", false, "Enable debug logging")
 	flagExportServer := flag.Bool("exportServerBundle", false, "Export the server bundle to a file called serverbundle")
+	flagDir := flag.String("dir", ".", "Directory to store server files in (config, encrypted messages, metrics)")
+	flagDisableMetrics := flag.Bool("disableMetrics", false, "Disable metrics reporting")
 	flag.Parse()
 
 	log.AddEverythingFromPattern("server/app/main")
@@ -32,6 +34,9 @@ func main() {
 		log.SetLevel(log.LevelDebug)
 	}
 	configDir := os.Getenv("CWTCH_HOME")
+	if configDir == "" {
+		configDir = *flagDir
+	}
 
 	if len(os.Args) == 2 && os.Args[1] == "gen1" {
 		config := new(cwtchserver.Config)
@@ -52,11 +57,16 @@ func main() {
 		return
 	}
 
-	serverConfig, err := cwtchserver.LoadCreateDefaultConfigFile(configDir, cwtchserver.ServerConfigFile, false, "", true)
+	disableMetrics := *flagDisableMetrics
+	if os.Getenv("DISABLE_METRICS") != "" {
+		disableMetrics = true
+	}
+	serverConfig, err := cwtchserver.LoadCreateDefaultConfigFile(configDir, cwtchserver.ServerConfigFile, false, "", !disableMetrics)
 	if err != nil {
 		log.Errorf("Could not load/create config file: %s\n", err)
 		return
 	}
+	serverConfig.ServerReporting.LogMetricsToFile = !disableMetrics
 	// we don't need real randomness for the port, just to avoid a possible conflict...
 	mrand.Seed(int64(time.Now().Nanosecond()))
 	controlPort := mrand.Intn(1000) + 9052
