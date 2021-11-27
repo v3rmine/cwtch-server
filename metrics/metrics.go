@@ -71,6 +71,7 @@ const (
 	Average
 )
 
+// TODO port to SQLite for persistence between runs?
 type monitorHistory struct {
 	monitorType         MonitorType
 	monitorAccumulation MonitorAccumulation
@@ -150,13 +151,25 @@ func (mh *monitorHistory) Months() []float64 {
 	return mh.returnCopy(mh.perMonthForYear[:])
 }
 
+const timeDay = time.Hour * 24
+const timeWeek = timeDay * 7
+const timeMonth = timeDay * 28
+
 func (mh *monitorHistory) Report(w *bufio.Writer) {
 	mh.lock.Lock()
 	fmt.Fprintln(w, "Minutes:", reportLine(mh.monitorType, mh.perMinutePerHour[:]))
-	fmt.Fprintln(w, "Hours:  ", reportLine(mh.monitorType, mh.perHourForDay[:]))
-	fmt.Fprintln(w, "Days:   ", reportLine(mh.monitorType, mh.perDayForWeek[:]))
-	fmt.Fprintln(w, "Weeks:  ", reportLine(mh.monitorType, mh.perWeekForMonth[:]))
-	fmt.Fprintln(w, "Months: ", reportLine(mh.monitorType, mh.perMonthForYear[:]))
+	if time.Since(mh.starttime) >= time.Hour {
+		fmt.Fprintln(w, "Hours:  ", reportLine(mh.monitorType, mh.perHourForDay[:]))
+	}
+	if time.Since(mh.starttime) >= timeDay {
+		fmt.Fprintln(w, "Days:   ", reportLine(mh.monitorType, mh.perDayForWeek[:]))
+	}
+	if time.Since(mh.starttime) >= timeWeek {
+		fmt.Fprintln(w, "Weeks:  ", reportLine(mh.monitorType, mh.perWeekForMonth[:]))
+	}
+	if time.Since(mh.starttime) >= timeMonth {
+		fmt.Fprintln(w, "Months: ", reportLine(mh.monitorType, mh.perMonthForYear[:]))
+	}
 	mh.lock.Unlock()
 }
 
@@ -215,10 +228,10 @@ func (mh *monitorHistory) monitorThread() {
 		case <-time.After(time.Minute):
 			mh.lock.Lock()
 
-			minuteAvg := rotateAndAccumulate(mh.perMinutePerHour[:], mh.monitor(), mh.monitorAccumulation)
+			minuteAcc := rotateAndAccumulate(mh.perMinutePerHour[:], mh.monitor(), mh.monitorAccumulation)
 
 			if time.Since(mh.timeLastHourRotate) > time.Hour {
-				rotateAndAccumulate(mh.perHourForDay[:], minuteAvg, mh.monitorAccumulation)
+				rotateAndAccumulate(mh.perHourForDay[:], minuteAcc, mh.monitorAccumulation)
 				mh.timeLastHourRotate = time.Now()
 			}
 

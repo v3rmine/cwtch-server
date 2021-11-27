@@ -42,9 +42,7 @@ const (
 
 // Reporting is a struct for storing a the config a server needs to be a peer, and connect to a group to report
 type Reporting struct {
-	LogMetricsToFile    bool   `json:"logMetricsToFile"`
-	ReportingGroupID    string `json:"reportingGroupId"`
-	ReportingServerAddr string `json:"reportingServerAddr"`
+	LogMetricsToFile bool `json:"logMetricsToFile"`
 }
 
 // Config is a struct for storing basic server configuration
@@ -92,9 +90,7 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 	config.TokenServerPublicKey = tid.PublicKey()
 	config.MaxBufferLines = 100000
 	config.ServerReporting = Reporting{
-		LogMetricsToFile:    true,
-		ReportingGroupID:    "",
-		ReportingServerAddr: "",
+		LogMetricsToFile: false,
 	}
 	config.Attributes[AttrAutostart] = "false"
 
@@ -112,19 +108,20 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 
 // LoadCreateDefaultConfigFile loads a Config from or creates a default config and saves it to a json file specified by filename
 // if the encrypted flag is true the config is store encrypted by password
-func LoadCreateDefaultConfigFile(configDir, filename string, encrypted bool, password string) (*Config, error) {
+func LoadCreateDefaultConfigFile(configDir, filename string, encrypted bool, password string, defaultLogToFile bool) (*Config, error) {
 	if _, err := os.Stat(path.Join(configDir, filename)); os.IsNotExist(err) {
-		return CreateConfig(configDir, filename, encrypted, password)
+		return CreateConfig(configDir, filename, encrypted, password, defaultLogToFile)
 	}
 	return LoadConfig(configDir, filename, encrypted, password)
 }
 
 // CreateConfig creates a default config and saves it to a json file specified by filename
 // if the encrypted flag is true the config is store encrypted by password
-func CreateConfig(configDir, filename string, encrypted bool, password string) (*Config, error) {
+func CreateConfig(configDir, filename string, encrypted bool, password string, defaultLogToFile bool) (*Config, error) {
 	log.Debugf("CreateConfig for server with configDir: %s\n", configDir)
 	os.MkdirAll(configDir, 0700)
 	config := initDefaultConfig(configDir, filename, encrypted)
+	config.ServerReporting.LogMetricsToFile = defaultLogToFile
 	if encrypted {
 		key, _, err := v1.InitV1Directory(configDir, password)
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 	"git.openprivacy.ca/cwtch.im/tapir/primitives"
 	"git.openprivacy.ca/openprivacy/connectivity/tor"
 	"git.openprivacy.ca/openprivacy/log"
+	_ "github.com/mattn/go-sqlite3" // sqlite3 driver
 	"io/ioutil"
 	mrand "math/rand"
 	"os"
@@ -42,9 +43,7 @@ func main() {
 		config.TokenServerPublicKey = tid.PublicKey()
 		config.MaxBufferLines = 100000
 		config.ServerReporting = cwtchserver.Reporting{
-			LogMetricsToFile:    true,
-			ReportingGroupID:    "",
-			ReportingServerAddr: "",
+			LogMetricsToFile: true,
 		}
 		config.ConfigDir = "."
 		config.FilePath = cwtchserver.ServerConfigFile
@@ -53,7 +52,7 @@ func main() {
 		return
 	}
 
-	serverConfig, err := cwtchserver.LoadCreateDefaultConfigFile(configDir, cwtchserver.ServerConfigFile, false, "")
+	serverConfig, err := cwtchserver.LoadCreateDefaultConfigFile(configDir, cwtchserver.ServerConfigFile, false, "", true)
 	if err != nil {
 		log.Errorf("Could not load/create config file: %s\n", err)
 		return

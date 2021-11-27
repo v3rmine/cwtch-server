@@ -42,21 +42,22 @@ type Server interface {
 	TofuBundle() string
 	GetAttribute(string) string
 	SetAttribute(string, string)
+	SetMonitorLogging(bool)
 }
 
 type server struct {
-	service              tapir.Service
-	config               *Config
-	metricsPack          metrics.Monitors
-	tokenTapirService    tapir.Service
-	tokenServer          *privacypass.TokenServer
-	tokenService         primitives.Identity
-	tokenServicePrivKey  ed25519.PrivateKey
-	tokenServiceStopped  bool
-	onionServiceStopped  bool
-	running              bool
-	existingMessageCount int
-	lock                 sync.RWMutex
+	config              *Config
+	service             tapir.Service
+	messageStore        storage.MessageStoreInterface
+	metricsPack         metrics.Monitors
+	tokenTapirService   tapir.Service
+	tokenServer         *privacypass.TokenServer
+	tokenService        primitives.Identity
+	tokenServicePrivKey ed25519.PrivateKey
+	tokenServiceStopped bool
+	onionServiceStopped bool
+	running             bool
+	lock                sync.RWMutex
 }
 
 // NewServer creates and configures a new server based on the supplied configuration
@@ -78,6 +79,21 @@ func (s *server) Identity() primitives.Identity {
 	return s.config.Identity()
 }
 
+// helper fn to pass to metrics
+func (s *server) getStorageTotalMessageCount() int {
+	if s.messageStore != nil {
+		return s.messageStore.MessagesCount()
+	}
+	return 0
+}
+
+// helper fn to pass to storage
+func (s *server) incMessageCount() {
+	if s.metricsPack.MessageCounter != nil {
+		s.metricsPack.MessageCounter.Add(1)
+	}
+}
+
 // Run starts a server with the given privateKey
 func (s *server) Run(acn connectivity.ACN) error {
 	s.lock.Lock()
@@ -91,16 +107,16 @@ func (s *server) Run(acn connectivity.ACN) error {
 	service.Init(acn, s.config.PrivateKey, &identity)
 	s.service = service
 	log.Infof("cwtch server running on cwtch:%s\n", s.Onion())
-	s.metricsPack.Start(service, s.config.ConfigDir, s.config.ServerReporting.LogMetricsToFile)
 
-	ms, err := storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"), s.metricsPack.MessageCounter)
+	if s.config.ServerReporting.LogMetricsToFile {
+		s.metricsPack.Start(service, s.getStorageTotalMessageCount, s.config.ConfigDir, s.config.ServerReporting.LogMetricsToFile)
+	}
+
+	var err error
+	s.messageStore, err = storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"), s.incMessageCount)
 	if err != nil {
 		return fmt.Errorf("could not open database: %v", err)
 	}
-
-	// Needed because we only collect metrics on a per-session basis
-	// TODO fix metrics so they persist across sessions?
-	s.existingMessageCount = len(ms.FetchMessages())
 
 	s.tokenTapirService = new(tor2.BaseOnionService)
 	s.tokenTapirService.Init(acn, s.tokenServicePrivKey, &s.tokenService)
@@ -114,7 +130,7 @@ func (s *server) Run(acn connectivity.ACN) error {
 		s.tokenServiceStopped = true
 	}()
 	go func() {
-		s.service.Listen(NewTokenBoardServer(ms, s.tokenServer))
+		s.service.Listen(NewTokenBoardServer(s.messageStore, s.tokenServer))
 		s.onionServiceStopped = true
 	}()
 
@@ -151,6 +167,7 @@ func (s *server) Stop() {
 	defer s.lock.Unlock()
 	if s.running {
 		s.service.Shutdown()
+		s.messageStore.Close()
 		s.tokenTapirService.Shutdown()
 		log.Infof("Closing Token server Database...")
 
@@ -169,20 +186,16 @@ func (s *server) Destroy() {
 
 // Statistics is an encapsulation of information about the server that an operator might want to know at a glance.
 type Statistics struct {
-	TotalMessages int
+	TotalMessages    int
+	TotalConnections int
 }
 
 // GetStatistics is a stub method for providing some high level information about
 // the server operation to bundling applications (e.g. the UI)
 func (s *server) GetStatistics() Statistics {
-	// TODO Statistics from Metrics is very awkward. Metrics needs an overhaul to make safe
-	total := s.existingMessageCount
-	if s.metricsPack.TotalMessageCounter != nil {
-		total += s.metricsPack.TotalMessageCounter.Count()
-	}
-
 	return Statistics{
-		TotalMessages: total,
+		TotalMessages:    s.messageStore.MessagesCount(),
+		TotalConnections: s.service.Metrics().ConnectionCount,
 	}
 }
 
@@ -228,4 +241,15 @@ func (s *server) GetAttribute(key string) string {
 // SetAttribute sets a server attribute
 func (s *server) SetAttribute(key, val string) {
 	s.config.SetAttribute(key, val)
+}
+
+// SetMonitorLogging turns on or off the monitor logging suite, and logging to a file in the server dir
+func (s *server) SetMonitorLogging(do bool) {
+	s.config.ServerReporting.LogMetricsToFile = do
+	s.config.Save()
+	if do {
+		s.metricsPack.Start(s.service, s.getStorageTotalMessageCount, s.config.ConfigDir, s.config.ServerReporting.LogMetricsToFile)
+	} else {
+		s.metricsPack.Stop()
+	}
 }

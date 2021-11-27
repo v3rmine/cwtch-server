@@ -63,7 +63,6 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 			}
 		}
 	}
-	log.Infof("LoadServers returning: %s\n", loadedServers)
 	return loadedServers, nil
 }
 
@@ -71,7 +70,7 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 func (s *servers) CreateServer(password string) (Server, error) {
 	newLocalID := model.GenerateRandomID()
 	directory := path.Join(s.directory, newLocalID)
-	config, err := CreateConfig(directory, ServerConfigFile, true, password)
+	config, err := CreateConfig(directory, ServerConfigFile, true, password, false)
 	if err != nil {
 		return nil, err
 	}
