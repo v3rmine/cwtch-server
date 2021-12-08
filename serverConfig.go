@@ -40,6 +40,10 @@ const (
 	StoreageTypeNoPassword = "storage-no-password"
 )
 
+const version = "1"
+const versionFile = "VERSION"
+const saltFile = "SALT"
+
 // Reporting is a struct for storing a the config a server needs to be a peer, and connect to a group to report
 type Reporting struct {
 	LogMetricsToFile bool `json:"logMetricsToFile"`
@@ -123,7 +127,7 @@ func CreateConfig(configDir, filename string, encrypted bool, password string, d
 	config := initDefaultConfig(configDir, filename, encrypted)
 	config.ServerReporting.LogMetricsToFile = defaultLogToFile
 	if encrypted {
-		key, _, err := v1.InitV1Directory(configDir, password)
+		key, _, err := InitV1Directory(configDir, password)
 		if err != nil {
 			log.Errorf("could not create server directory: %s", err)
 			return nil, err
@@ -134,6 +138,29 @@ func CreateConfig(configDir, filename string, encrypted bool, password string, d
 
 	config.Save()
 	return config, nil
+}
+
+// InitV1Directory generates a key and salt from a password, writes a SALT and VERSION file and returns the key and salt
+func InitV1Directory(directory, password string) ([32]byte, [128]byte, error) {
+	os.Mkdir(directory, 0700)
+
+	key, salt, err := v1.CreateKeySalt(password)
+	if err != nil {
+		log.Errorf("Could not create key for profile store from password: %v\n", err)
+		return [32]byte{}, [128]byte{}, err
+	}
+
+	if err = ioutil.WriteFile(path.Join(directory, versionFile), []byte(version), 0600); err != nil {
+		log.Errorf("Could not write version file: %v", err)
+		return [32]byte{}, [128]byte{}, err
+	}
+
+	if err = ioutil.WriteFile(path.Join(directory, saltFile), salt[:], 0600); err != nil {
+		log.Errorf("Could not write salt file: %v", err)
+		return [32]byte{}, [128]byte{}, err
+	}
+
+	return key, salt, nil
 }
 
 // LoadConfig loads a Config from a json file specified by filename
