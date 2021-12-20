@@ -1,9 +1,9 @@
 package server
 
 import (
-	"cwtch.im/cwtch/model"
 	"errors"
 	"fmt"
+	"git.openprivacy.ca/cwtch.im/server/storage"
 	"git.openprivacy.ca/openprivacy/connectivity"
 	"git.openprivacy.ca/openprivacy/log"
 	"io/ioutil"
@@ -68,7 +68,7 @@ func (s *servers) LoadServers(password string) ([]string, error) {
 
 // CreateServer creates a new server and stores it, also returns an interface to it
 func (s *servers) CreateServer(password string) (Server, error) {
-	newLocalID := model.GenerateRandomID()
+	newLocalID := storage.GenerateRandomID()
 	directory := path.Join(s.directory, newLocalID)
 	config, err := CreateConfig(directory, ServerConfigFile, true, password, false)
 	if err != nil {
