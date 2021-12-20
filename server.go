@@ -193,10 +193,13 @@ type Statistics struct {
 // GetStatistics is a stub method for providing some high level information about
 // the server operation to bundling applications (e.g. the UI)
 func (s *server) GetStatistics() Statistics {
-	return Statistics{
-		TotalMessages:    s.messageStore.MessagesCount(),
-		TotalConnections: s.service.Metrics().ConnectionCount,
+	if s.running {
+		return Statistics{
+			TotalMessages:    s.messageStore.MessagesCount(),
+			TotalConnections: s.service.Metrics().ConnectionCount,
+		}
 	}
+	return Statistics{}
 }
 
 func (s *server) Delete(password string) error {

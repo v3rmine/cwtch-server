@@ -3,7 +3,7 @@ module git.openprivacy.ca/cwtch.im/server
 go 1.14
 
 require (
-	cwtch.im/cwtch v0.14.1
+	cwtch.im/cwtch v0.14.9
 	git.openprivacy.ca/cwtch.im/tapir v0.4.9
 	git.openprivacy.ca/openprivacy/connectivity v1.5.0
 	git.openprivacy.ca/openprivacy/log v1.0.3

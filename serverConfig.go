@@ -2,8 +2,8 @@ package server
 
 import (
 	"crypto/rand"
-	v1 "cwtch.im/cwtch/storage/v1"
 	"encoding/json"
+	"git.openprivacy.ca/cwtch.im/server/storage"
 	"git.openprivacy.ca/cwtch.im/tapir/primitives"
 	"git.openprivacy.ca/openprivacy/connectivity/tor"
 	"git.openprivacy.ca/openprivacy/log"
@@ -16,9 +16,6 @@ import (
 )
 
 const (
-	// SaltFile is the standard filename to store an encrypted config's SALT under beside it
-	SaltFile = "SALT"
-
 	// AttrAutostart is the attribute key for autostart setting
 	AttrAutostart = "autostart"
 
@@ -39,10 +36,6 @@ const (
 	// StoreageTypeNoPassword is a AttrStorageType that indicated a no password was used to protect the profile
 	StoreageTypeNoPassword = "storage-no-password"
 )
-
-const version = "1"
-const versionFile = "VERSION"
-const saltFile = "SALT"
 
 // Reporting is a struct for storing a the config a server needs to be a peer, and connect to a group to report
 type Reporting struct {
@@ -70,7 +63,7 @@ type Config struct {
 	Attributes map[string]string `json:"attributes"`
 
 	lock         sync.Mutex
-	encFileStore v1.FileStore
+	encFileStore storage.FileStore
 }
 
 // Identity returns an encapsulation of the servers keys
@@ -127,40 +120,17 @@ func CreateConfig(configDir, filename string, encrypted bool, password string, d
 	config := initDefaultConfig(configDir, filename, encrypted)
 	config.ServerReporting.LogMetricsToFile = defaultLogToFile
 	if encrypted {
-		key, _, err := InitV1Directory(configDir, password)
+		key, _, err := storage.InitV1Directory(configDir, password)
 		if err != nil {
 			log.Errorf("could not create server directory: %s", err)
 			return nil, err
 		}
 		config.key = key
-		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, key)
+		config.encFileStore = storage.NewFileStore(configDir, ServerConfigFile, key)
 	}
 
 	config.Save()
 	return config, nil
-}
-
-// InitV1Directory generates a key and salt from a password, writes a SALT and VERSION file and returns the key and salt
-func InitV1Directory(directory, password string) ([32]byte, [128]byte, error) {
-	os.Mkdir(directory, 0700)
-
-	key, salt, err := v1.CreateKeySalt(password)
-	if err != nil {
-		log.Errorf("Could not create key for profile store from password: %v\n", err)
-		return [32]byte{}, [128]byte{}, err
-	}
-
-	if err = ioutil.WriteFile(path.Join(directory, versionFile), []byte(version), 0600); err != nil {
-		log.Errorf("Could not write version file: %v", err)
-		return [32]byte{}, [128]byte{}, err
-	}
-
-	if err = ioutil.WriteFile(path.Join(directory, saltFile), salt[:], 0600); err != nil {
-		log.Errorf("Could not write salt file: %v", err)
-		return [32]byte{}, [128]byte{}, err
-	}
-
-	return key, salt, nil
 }
 
 // LoadConfig loads a Config from a json file specified by filename
@@ -169,12 +139,12 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 	var raw []byte
 	var err error
 	if encrypted {
-		salt, err := ioutil.ReadFile(path.Join(configDir, SaltFile))
+		salt, err := ioutil.ReadFile(path.Join(configDir, storage.SaltFile))
 		if err != nil {
 			return nil, err
 		}
-		config.key = v1.CreateKey(password, salt)
-		config.encFileStore = v1.NewFileStore(configDir, ServerConfigFile, config.key)
+		config.key = storage.CreateKey(password, salt)
+		config.encFileStore = storage.NewFileStore(configDir, ServerConfigFile, config.key)
 		raw, err = config.encFileStore.Read()
 		if err != nil {
 			// Not an error to log as load config is called blindly across all dirs with a password to see what it applies to
@@ -213,11 +183,11 @@ func (config *Config) Save() error {
 func (config *Config) CheckPassword(checkpass string) bool {
 	config.lock.Lock()
 	defer config.lock.Unlock()
-	salt, err := ioutil.ReadFile(path.Join(config.ConfigDir, SaltFile))
+	salt, err := ioutil.ReadFile(path.Join(config.ConfigDir, storage.SaltFile))
 	if err != nil {
 		return false
 	}
-	oldkey := v1.CreateKey(checkpass, salt[:])
+	oldkey := storage.CreateKey(checkpass, salt[:])
 	return oldkey == config.key
 }
 
