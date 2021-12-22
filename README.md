@@ -30,7 +30,7 @@ The app takes the following environment variables
 
 ## Using the Server
 
-When run the app will output standard log lines, one of which will contain the `tofubundle` in purple. This is the part you need to capture and import into a Cwtch client app so you can use the server for hosting groups
+When run the app will output standard log lines, one of which will contain the `serverbundle` in purple. This is the part you need to capture and import into a Cwtch client app so you can use the server for hosting groups
 
 ## Docker
 
@@ -42,8 +42,8 @@ or run our prebuild ones with
 
 and run it. It stores all Cwtch data in a Volume at `/var/lib/cwtch` so if you want the server data to persist you would run
 
-`docker run openpriv/cwtch-server -v /var/lib/cwtch/server01:/var/lib/cwtch`
+`docker run -v /var/lib/cwtch/server01:/var/lib/cwtch openpriv/cwtch-server`
 
 to create a persistent container you might try a command like:
 
-`docker run openpriv/cwtch-server --name cwtch -v /var/lib/cwtch/server01:/var/lib/cwtch --restart always`
+`docker run --name cwtch -v /var/lib/cwtch/server01:/var/lib/cwtch --restart always openpriv/cwtch-server`
