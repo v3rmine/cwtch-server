@@ -10,8 +10,8 @@ import (
 )
 
 type counter struct {
-	startTime time.Time
 	count     uint64
+	startTime time.Time
 }
 
 // Counter providers a threadsafe counter to use for storing long running counts
