@@ -9,9 +9,13 @@ import (
 	"time"
 )
 
+// Fields must be in this order because go compiler has problems with 64bit fields on 32 bit arches (arm32 raspberry pi):
+//   https://git.openprivacy.ca/cwtch.im/server/pulls/30
+//   https://github.com/golang/go/issues/599
+//   https://github.com/census-instrumentation/opencensus-go/issues/587
 type counter struct {
-	startTime time.Time
 	count     uint64
+	startTime time.Time
 }
 
 // Counter providers a threadsafe counter to use for storing long running counts
