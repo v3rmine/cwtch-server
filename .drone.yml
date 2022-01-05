@@ -5,7 +5,7 @@ name: linux-test
 
 steps:
   - name: fetch
-    image: golang
+    image: golang:1.17.5
     volumes:
       - name: deps
         path: /go
@@ -18,7 +18,7 @@ steps:
       - echo `date +%G-%m-%d-%H-%M` > BUILDDATE
 
   - name: quality
-    image: golang
+    image: golang:1.17.5
     volumes:
       - name: deps
         path: /go
@@ -27,7 +27,7 @@ steps:
       - staticcheck ./...
 
   - name: units-tests
-    image: golang
+    image: golang:1.17.5
     volumes:
       - name: deps
         path: /go
@@ -35,7 +35,7 @@ steps:
       - sh testing/tests.sh
 
   - name: test-builda-app
-    image: golang
+    image: golang:1.17.5
     volumes:
       - name: deps
         path: /go
@@ -45,6 +45,7 @@ steps:
 
   - name: notify-email
     image: drillster/drone-email
+    pull: if-not-exists
     settings:
       host: build.openprivacy.ca
       port: 25
@@ -54,6 +55,7 @@ steps:
       status: [failure]
 
   - name: notify-gogs
+    pull: if-not-exists
     image: openpriv/drone-gogs
     when:
       event: pull_request

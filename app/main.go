@@ -96,7 +96,7 @@ func main() {
 
 	if *flagExportServer {
 		// Todo: change all to server export
-		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.TofuBundle()), 0600)
+		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.ServerBundle()), 0600)
 	}
 
 	// Graceful Stop
