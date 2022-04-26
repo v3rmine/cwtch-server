@@ -42,6 +42,9 @@ type Reporting struct {
 	LogMetricsToFile bool `json:"logMetricsToFile"`
 }
 
+// messages are ~4kb of storage
+const MessagesPerMB = 250
+
 // Config is a struct for storing basic server configuration
 type Config struct {
 	ConfigDir      string `json:"-"`
@@ -61,6 +64,10 @@ type Config struct {
 	ServerReporting Reporting `json:"serverReporting"`
 
 	Attributes map[string]string `json:"attributes"`
+
+	// messages are ~4kb of storage
+	// -1 == infinite
+	MaxStorageMBs int `json:"maxStorageMBs"`
 
 	lock         sync.Mutex
 	encFileStore storage.FileStore
@@ -90,6 +97,7 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 		LogMetricsToFile: false,
 	}
 	config.Attributes[AttrAutostart] = "false"
+	config.MaxStorageMBs = -1
 
 	k := new(ristretto255.Scalar)
 	b := make([]byte, 64)
@@ -211,4 +219,27 @@ func (config *Config) GetAttribute(key string) string {
 	config.lock.Lock()
 	defer config.lock.Unlock()
 	return config.Attributes[key]
+}
+
+// GetMaxMessages returns the config setting for Max messages converting from MaxMB to messages
+// or -1 for infinite
+func (config *Config) GetMaxMessages() int {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	if config.MaxStorageMBs == -1 {
+		return -1
+	}
+	return config.MaxStorageMBs * MessagesPerMB
+}
+
+func (config *Config) GetMaxMessageMBs() int {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	return config.MaxStorageMBs
+}
+
+func (config *Config) SetMaxMessageMBs(newval int) {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	config.MaxStorageMBs = newval
 }
