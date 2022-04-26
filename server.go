@@ -176,7 +176,7 @@ func (s *server) Stop() {
 	}
 }
 
-// Destroy frees the last of the resources the server has active (toklenServer persistence) leaving it un-re-runable and completely shutdown
+// Destroy frees the last of the resources the server has active (tokenServer persistence) leaving it un-re-runable and completely shutdown
 func (s *server) Destroy() {
 	s.Stop()
 	s.lock.Lock()
@@ -247,12 +247,12 @@ func (s *server) SetAttribute(key, val string) {
 }
 
 // GetMessageCap gets a server's MaxStorageMBs value
-func (s *server) GetMaxStoreageMBs() int {
+func (s *server) GetMaxStorageMBs() int {
 	return s.config.GetMaxMessageMBs()
 }
 
-// SetMaxStoreageMBs sets a server's MaxStoreageMBs and sets MaxMessages for storage (which can trigger a prune)
-func (s *server) SetMaxStoreageMBs(val int) {
+// SetMaxStorageMBs sets a server's MaxStorageMBs and sets MaxMessages for storage (which can trigger a prune)
+func (s *server) SetMaxStorageMBs(val int) {
 	s.config.SetMaxMessageMBs(val)
 	s.messageStore.SetMessageCap(s.config.GetMaxMessages())
 }
