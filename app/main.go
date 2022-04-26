@@ -80,7 +80,7 @@ func main() {
 
 	os.MkdirAll("tordir/tor", 0700)
 	tor.NewTorrc().WithHashedPassword(base64.StdEncoding.EncodeToString(key)).WithControlPort(controlPort).Build("./tordir/tor/torrc")
-	acn, err := tor.NewTorACNWithAuth("tordir", "", controlPort, tor.HashedPasswordAuthenticator{Password: base64.StdEncoding.EncodeToString(key)})
+	acn, err := tor.NewTorACNWithAuth("tordir", "", "tordir/tor", controlPort, tor.HashedPasswordAuthenticator{Password: base64.StdEncoding.EncodeToString(key)})
 
 	if err != nil {
 		log.Errorf("\nError connecting to Tor: %v\n", err)

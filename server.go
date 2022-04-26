@@ -113,7 +113,7 @@ func (s *server) Run(acn connectivity.ACN) error {
 	}
 
 	var err error
-	s.messageStore, err = storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"), s.incMessageCount)
+	s.messageStore, err = storage.InitializeSqliteMessageStore(path.Join(s.config.ConfigDir, "cwtch.messages"), s.config.GetMaxMessages(), s.incMessageCount)
 	if err != nil {
 		return fmt.Errorf("could not open database: %v", err)
 	}
@@ -160,7 +160,7 @@ func (s *server) CheckStatus() (bool, error) {
 }
 
 // Stop turns off the server so it cannot receive connections and frees most resourses.
-// The server is still in a reRunable state and tokenServer still has an active persistance
+// The server is still in a reRunable state and tokenServer still has an active persistence
 func (s *server) Stop() {
 	log.Infof("Shutting down server")
 	s.lock.Lock()
@@ -176,7 +176,7 @@ func (s *server) Stop() {
 	}
 }
 
-// Destroy frees the last of the resources the server has active (toklenServer persistance) leaving it un-re-runable and completely shutdown
+// Destroy frees the last of the resources the server has active (tokenServer persistence) leaving it un-re-runable and completely shutdown
 func (s *server) Destroy() {
 	s.Stop()
 	s.lock.Lock()
@@ -244,6 +244,17 @@ func (s *server) GetAttribute(key string) string {
 // SetAttribute sets a server attribute
 func (s *server) SetAttribute(key, val string) {
 	s.config.SetAttribute(key, val)
+}
+
+// GetMessageCap gets a server's MaxStorageMBs value
+func (s *server) GetMaxStorageMBs() int {
+	return s.config.GetMaxMessageMBs()
+}
+
+// SetMaxStorageMBs sets a server's MaxStorageMBs and sets MaxMessages for storage (which can trigger a prune)
+func (s *server) SetMaxStorageMBs(val int) {
+	s.config.SetMaxMessageMBs(val)
+	s.messageStore.SetMessageCap(s.config.GetMaxMessages())
 }
 
 // SetMonitorLogging turns on or off the monitor logging suite, and logging to a file in the server dir

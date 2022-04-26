@@ -16,7 +16,7 @@ func TestMessageStore(t *testing.T) {
 	os.Remove(filename)
 	log.SetLevel(log.LevelDebug)
 	counter := metrics.NewCounter()
-	db, err := InitializeSqliteMessageStore(filename, func() { counter.Add(1) })
+	db, err := InitializeSqliteMessageStore(filename, -1, func() { counter.Add(1) })
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
