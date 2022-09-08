@@ -37,7 +37,6 @@ func main() {
 	if configDir == "" {
 		configDir = *flagDir
 	}
-
 	if len(os.Args) == 2 && os.Args[1] == "gen1" {
 		config := new(cwtchserver.Config)
 		id, pk := primitives.InitializeEphemeralIdentity()
@@ -79,9 +78,8 @@ func main() {
 	}
 
 	os.MkdirAll("tordir/tor", 0700)
-	tor.NewTorrc().WithHashedPassword(base64.StdEncoding.EncodeToString(key)).WithControlPort(controlPort).Build("./tordir/tor/torrc")
+	tor.NewTorrc().WithHashedPassword(base64.StdEncoding.EncodeToString(key)).WithControlPort(controlPort).WithSocksPort(controlPort + 1).Build("./tordir/tor/torrc")
 	acn, err := tor.NewTorACNWithAuth("tordir", "", "tordir/tor", controlPort, tor.HashedPasswordAuthenticator{Password: base64.StdEncoding.EncodeToString(key)})
-
 	if err != nil {
 		log.Errorf("\nError connecting to Tor: %v\n", err)
 		os.Exit(1)
@@ -109,8 +107,27 @@ func main() {
 		os.Exit(1)
 	}()
 
-	server.Run(acn)
+	running := false
+	lastStatus := -2
 	for {
+		status, msg := acn.GetBootstrapStatus()
+		if status == 100 && !running {
+			log.Infoln("ACN is online, Running Server")
+			server.Run(acn)
+			running = true
+		}
+		if status != 100 {
+			if running {
+				log.Infoln("ACN is offline, Stopping Server")
+				server.Stop()
+				running = false
+			} else {
+				if lastStatus != status {
+					log.Infof("ACN booting... Status %v%%: %v\n", status, msg)
+					lastStatus = status
+				}
+			}
+		}
 		time.Sleep(time.Second)
 	}
 }

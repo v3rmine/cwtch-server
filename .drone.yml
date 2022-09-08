@@ -43,17 +43,6 @@ steps:
       - cd app
       - go build
 
-  - name: notify-email
-    image: drillster/drone-email
-    pull: if-not-exists
-    settings:
-      host: build.openprivacy.ca
-      port: 25
-      skip_verify: true
-      from: drone@openprivacy.ca
-    when:
-      status: [failure]
-
   - name: notify-gogs
     pull: if-not-exists
     image: openpriv/drone-gogs
