@@ -106,7 +106,7 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 		// unable to generate secure random numbers
 		panic("unable to generate secure random numbers")
 	}
-	k.FromUniformBytes(b)
+	k.SetUniformBytes(b)
 	config.TokenServiceK = *k
 	return config
 }
