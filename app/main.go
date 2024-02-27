@@ -44,7 +44,6 @@ func main() {
 		config.PublicKey = id.PublicKey()
 		config.TokenServerPrivateKey = tpk
 		config.TokenServerPublicKey = tid.PublicKey()
-		config.MaxBufferLines = 100000
 		config.ServerReporting = cwtchserver.Reporting{
 			LogMetricsToFile: true,
 		}

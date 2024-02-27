@@ -46,11 +46,10 @@ const MessagesPerMB = 250
 
 // Config is a struct for storing basic server configuration
 type Config struct {
-	ConfigDir      string `json:"-"`
-	FilePath       string `json:"-"`
-	Encrypted      bool   `json:"-"`
-	key            [32]byte
-	MaxBufferLines int `json:"maxBufferLines"`
+	ConfigDir string `json:"-"`
+	FilePath  string `json:"-"`
+	Encrypted bool   `json:"-"`
+	key       [32]byte
 
 	PublicKey  ed25519.PublicKey  `json:"publicKey"`
 	PrivateKey ed25519.PrivateKey `json:"privateKey"`
@@ -91,7 +90,6 @@ func initDefaultConfig(configDir, filename string, encrypted bool) *Config {
 	config.PublicKey = id.PublicKey()
 	config.TokenServerPrivateKey = tpk
 	config.TokenServerPublicKey = tid.PublicKey()
-	config.MaxBufferLines = 100000
 	config.ServerReporting = Reporting{
 		LogMetricsToFile: false,
 	}
