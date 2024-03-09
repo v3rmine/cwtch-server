@@ -6,7 +6,7 @@ import (
 	"git.openprivacy.ca/cwtch.im/server/storage"
 	"git.openprivacy.ca/openprivacy/connectivity"
 	"git.openprivacy.ca/openprivacy/log"
-	"io/ioutil"
+	"os"
 	"path"
 	"sync"
 )
@@ -47,7 +47,7 @@ func NewServers(acn connectivity.ACN, directory string) Servers {
 func (s *servers) LoadServers(password string) ([]string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	dirs, err := ioutil.ReadDir(s.directory)
+	dirs, err := os.ReadDir(s.directory)
 	if err != nil {
 		return nil, fmt.Errorf("error: cannot read server directory: %v", err)
 	}

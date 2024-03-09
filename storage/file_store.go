@@ -9,7 +9,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -37,12 +36,12 @@ func InitV1Directory(directory, password string) ([32]byte, [128]byte, error) {
 		return [32]byte{}, [128]byte{}, err
 	}
 
-	if err = ioutil.WriteFile(path.Join(directory, versionFile), []byte(version), 0600); err != nil {
+	if err = os.WriteFile(path.Join(directory, versionFile), []byte(version), 0600); err != nil {
 		log.Errorf("Could not write version file: %v", err)
 		return [32]byte{}, [128]byte{}, err
 	}
 
-	if err = ioutil.WriteFile(path.Join(directory, SaltFile), salt[:], 0600); err != nil {
+	if err = os.WriteFile(path.Join(directory, SaltFile), salt[:], 0600); err != nil {
 		log.Errorf("Could not write salt file: %v", err)
 		return [32]byte{}, [128]byte{}, err
 	}
@@ -97,7 +96,7 @@ func CreateKey(password string, salt []byte) [32]byte {
 	return dkr
 }
 
-//EncryptFileData encrypts the data with the supplied key
+// EncryptFileData encrypts the data with the supplied key
 func EncryptFileData(data []byte, key [32]byte) ([]byte, error) {
 	var nonce [24]byte
 
@@ -110,7 +109,7 @@ func EncryptFileData(data []byte, key [32]byte) ([]byte, error) {
 	return encrypted, nil
 }
 
-//DecryptFile decrypts the passed ciphertext with the supplied key.
+// DecryptFile decrypts the passed ciphertext with the supplied key.
 func DecryptFile(ciphertext []byte, key [32]byte) ([]byte, error) {
 	var decryptNonce [24]byte
 	copy(decryptNonce[:], ciphertext[:24])
@@ -123,7 +122,7 @@ func DecryptFile(ciphertext []byte, key [32]byte) ([]byte, error) {
 
 // ReadEncryptedFile reads data from an encrypted file in directory with key
 func ReadEncryptedFile(directory, filename string, key [32]byte) ([]byte, error) {
-	encryptedbytes, err := ioutil.ReadFile(path.Join(directory, filename))
+	encryptedbytes, err := os.ReadFile(path.Join(directory, filename))
 	if err == nil {
 		return DecryptFile(encryptedbytes, key)
 	}
@@ -137,7 +136,7 @@ func (fps *fileStore) Write(data []byte) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path.Join(fps.directory, fps.filename), encryptedbytes, 0600)
+	err = os.WriteFile(path.Join(fps.directory, fps.filename), encryptedbytes, 0600)
 	return err
 }
 

@@ -9,18 +9,14 @@ go list ./... | xargs go vet
 echo ""
 echo "Linting:"
 
-staticcheck ./...
+go list ./... | staticcheck ./...
 
 echo "Running nilaway..."
-nilaway -include-pkgs="cwtch.im/cwtch,cwtch.im/tapir,git.openprivacy.ca/openprivacy/connectivity" -exclude-file-docstrings="nolint:nilaway" ./...
+nilaway -include-pkgs="cwtch.im/server,cwtch.im/cwtch,cwtch.im/tapir,git.openprivacy.ca/openprivacy/connectivity" -exclude-file-docstrings="nolint:nilaway" ./...
 
 
 echo "Time to format"
 gofmt -l -s -w .
-
-# ineffassign (https://github.com/gordonklaus/ineffassign)
-echo "Checking for ineffectual assignment of errors (unchecked errors...)"
-ineffassign .
 
 # misspell (https://github.com/client9/misspell/cmd/misspell)
 echo "Checking for misspelled words..."

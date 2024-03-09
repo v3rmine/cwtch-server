@@ -9,7 +9,6 @@ import (
 	"git.openprivacy.ca/openprivacy/log"
 	"github.com/gtank/ristretto255"
 	"golang.org/x/crypto/ed25519"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -147,7 +146,7 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 	var raw []byte
 	var err error
 	if encrypted {
-		salt, err := ioutil.ReadFile(path.Join(configDir, storage.SaltFile))
+		salt, err := os.ReadFile(path.Join(configDir, storage.SaltFile))
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +159,7 @@ func LoadConfig(configDir, filename string, encrypted bool, password string) (*C
 			return nil, err
 		}
 	} else {
-		raw, err = ioutil.ReadFile(path.Join(configDir, filename))
+		raw, err = os.ReadFile(path.Join(configDir, filename))
 		if err != nil {
 			return nil, err
 		}
@@ -184,14 +183,14 @@ func (config *Config) Save() error {
 	if config.Encrypted {
 		return config.encFileStore.Write(bytes)
 	}
-	return ioutil.WriteFile(path.Join(config.ConfigDir, config.FilePath), bytes, 0600)
+	return os.WriteFile(path.Join(config.ConfigDir, config.FilePath), bytes, 0600)
 }
 
 // CheckPassword returns true if the given password produces the same key as the current stored key, otherwise false.
 func (config *Config) CheckPassword(checkpass string) bool {
 	config.lock.Lock()
 	defer config.lock.Unlock()
-	salt, err := ioutil.ReadFile(path.Join(config.ConfigDir, storage.SaltFile))
+	salt, err := os.ReadFile(path.Join(config.ConfigDir, storage.SaltFile))
 	if err != nil {
 		return false
 	}

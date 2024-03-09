@@ -9,7 +9,6 @@ import (
 	"git.openprivacy.ca/openprivacy/connectivity/tor"
 	"git.openprivacy.ca/openprivacy/log"
 	_ "github.com/mattn/go-sqlite3" // sqlite3 driver
-	"io/ioutil"
 	mrand "math/rand"
 	"os"
 	"os/signal"
@@ -67,8 +66,8 @@ func main() {
 	}
 	serverConfig.ServerReporting.LogMetricsToFile = !disableMetrics
 	// we don't need real randomness for the port, just to avoid a possible conflict...
-	mrand.Seed(int64(time.Now().Nanosecond()))
-	controlPort := mrand.Intn(1000) + 9052
+	r := mrand.New(mrand.NewSource(int64(time.Now().Nanosecond())))
+	controlPort := r.Intn(1000) + 9052
 
 	// generate a random password
 	key := make([]byte, 64)
@@ -94,7 +93,7 @@ func main() {
 
 	if *flagExportServer {
 		// Todo: change all to server export
-		ioutil.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.ServerBundle()), 0600)
+		os.WriteFile(path.Join(serverConfig.ConfigDir, "serverbundle"), []byte(server.ServerBundle()), 0600)
 	}
 
 	// Graceful Stop
