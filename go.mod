@@ -1,6 +1,6 @@
 module git.openprivacy.ca/cwtch.im/server
 
-go 1.14
+go 1.20
 
 require (
 	cwtch.im/cwtch v0.18.0

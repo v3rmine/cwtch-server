@@ -11,6 +11,9 @@ echo "Linting:"
 
 staticcheck ./...
 
+echo "Running nilaway..."
+nilaway -include-pkgs="cwtch.im/cwtch,cwtch.im/tapir,git.openprivacy.ca/openprivacy/connectivity" -exclude-file-docstrings="nolint:nilaway" ./...
+
 
 echo "Time to format"
 gofmt -l -s -w .

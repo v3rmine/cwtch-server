@@ -5,20 +5,20 @@ name: linux-test
 
 steps:
   - name: fetch
-    image: golang:1.17.5
+    image: golang:1.21.5
     volumes:
       - name: deps
         path: /go
     commands:
-      #- go get -u golang.org/x/lint/golint
       - go install honnef.co/go/tools/cmd/staticcheck@latest
+      - go install go.uber.org/nilaway/cmd/nilaway@latest
       - git fetch --tags
       - go get
       - echo `git describe --tags` > VERSION
       - echo `date +%G-%m-%d-%H-%M` > BUILDDATE
 
   - name: quality
-    image: golang:1.17.5
+    image: golang:1.21.5
     volumes:
       - name: deps
         path: /go
@@ -27,7 +27,7 @@ steps:
       - staticcheck ./...
 
   - name: units-tests
-    image: golang:1.17.5
+    image: golang:1.21.5
     volumes:
       - name: deps
         path: /go
@@ -35,7 +35,7 @@ steps:
       - sh testing/tests.sh
 
   - name: test-builda-app
-    image: golang:1.17.5
+    image: golang:1.21.5
     volumes:
       - name: deps
         path: /go
