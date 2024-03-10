@@ -78,7 +78,7 @@ func (s *SqliteMessageStore) checkPruneMessages() {
 		log.Debugf("Message Count: %d / Message Cap: %d, message cap exceeded, pruning oldest 10%...", s.messageCount, s.messageCap)
 		// Delete 10% of messages (and any overage if the cap was adjusted lower)
 		delCount := (s.messageCount - s.messageCap) + s.messageCap/10
-		stmt, err := s.preparedPruneStatement.Exec(s.messageCap / 10)
+		stmt, err := s.preparedPruneStatement.Exec(delCount)
 		if err != nil {
 			log.Errorf("%v %q", stmt, err)
 		}
