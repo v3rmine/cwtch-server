@@ -1,4 +1,6 @@
-FROM alpine:latest as tor-build-stage
+ARG ALPINE_VERSION=3.18
+
+FROM alpine:${ALPINE_VERSION} AS tor-build-stage
 
 # Install prerequisites, grab tor, compile it and move to /usr/local
 RUN apk --no-cache add --update \
@@ -14,14 +16,14 @@ RUN apk --no-cache add --update \
         zlib-dev \
         zstd \
         zstd-dev \
-      && wget -q https://dist.torproject.org/tor-0.4.6.6.tar.gz \
-      && tar xf tor-0.4.6.6.tar.gz \
-      && cd tor-0.4.6.6 \
+      && wget -q https://dist.torproject.org/tor-0.4.8.9.tar.gz \
+      && tar xf tor-0.4.8.9.tar.gz \
+      && cd tor-0.4.8.9 \
       && ./configure \
       && make install \
       && ls -R /usr/local/
 
-FROM golang:alpine as cwtch-build-stage
+FROM golang:alpine${ALPINE_VERSION} AS cwtch-build-stage
 # Need additional packages for cgo etc
 RUN apk --no-cache add --update gcc build-base
 
@@ -32,7 +34,7 @@ COPY . src/
 RUN cd src/app && go build 
 
 
-FROM alpine:latest
+FROM alpine:${ALPINE_VERSION}
 #Specify various env vars
 ENV TOR_USER=_tor CWTCH_USER=_cwtch CWTCH_HOME=/var/lib/cwtch
 
